@@ -1,0 +1,6 @@
+{
+  "name": "Phần mềm Quản lý Mầm non & Số hóa Hồ sơ",
+  "description": "Hệ thống số hóa hồ sơ sổ sách mầm non, quản lý kiểm thực 3 bước, trích xuất hồ sơ, quản lý thu chi, tính lương giáo viên và biểu đồ tài chính chuẩn quy định GD&ĐT.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
