@@ -166,18 +166,18 @@ export default function Header({
   };
 
   return (
-    <header className="h-16 shrink-0 bg-white/95 backdrop-blur-md border-b border-slate-200/90 sticky top-0 z-30 shadow-2xs">
-      <div className="h-full px-3 sm:px-5 lg:px-6 flex items-center justify-between gap-2 sm:gap-4">
+    <header className="h-16 shrink-0 bg-white/95 backdrop-blur-md border-b border-slate-200/90 sticky top-0 z-50 shadow-2xs">
+      <div className="h-full px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 sm:gap-3">
         
-        {/* 1. Left: Mobile Menu Toggle + School Brand & Module Breadcrumb */}
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        {/* 1. Left: Mobile Menu Toggle + School Brand & Module Breadcrumb (Không bị co hẹp hay che khuất) */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 max-w-[40%] sm:max-w-[46%] lg:max-w-[50%]">
           {/* Mobile Sidebar Hamburger Toggle */}
           {onToggleMobileSidebar && (
             <button
               type="button"
               onClick={onToggleMobileSidebar}
               title="Mở danh mục sổ sách"
-              className="lg:hidden p-2 rounded-xl text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+              className="lg:hidden p-1.5 sm:p-2 rounded-xl text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -187,7 +187,7 @@ export default function Header({
           <div
             onClick={onOpenLogoModal}
             title="Nhấn vào biểu tượng để đổi logo trường mầm non"
-            className="relative group w-9 h-9 sm:w-10 sm:h-10 shrink-0 cursor-pointer select-none transition-transform hover:scale-105"
+            className="relative group w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 shrink-0 cursor-pointer select-none transition-transform hover:scale-105"
           >
             {renderLogo()}
             <button
@@ -204,8 +204,8 @@ export default function Header({
           </div>
 
           {/* School Name & Breadcrumb */}
-          <div className="min-w-0 truncate">
-            <div className="flex items-center gap-1.5 flex-wrap leading-none">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 leading-none">
               <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-800 truncate">
                 {schoolInfo.department}
               </span>
@@ -213,200 +213,204 @@ export default function Header({
               <span className="hidden sm:inline-block text-[10px] font-semibold text-slate-500">
                 {schoolInfo.academicYear}
               </span>
-              <span className="text-slate-300 hidden md:inline">•</span>
-              <div className="hidden md:inline-flex items-center gap-1 text-[11px] font-bold text-slate-700">
+              <span className="text-slate-300 hidden 2xl:inline">•</span>
+              <div className="hidden 2xl:inline-flex items-center gap-1 text-[11px] font-bold text-slate-700">
                 <span className="text-slate-400">Phân hệ:</span>
-                <span className="text-emerald-700 truncate max-w-[220px]">{activeModuleName}</span>
+                <span className="text-emerald-700 truncate max-w-[180px]">{activeModuleName}</span>
               </div>
             </div>
-            <h1 className="text-xs sm:text-sm md:text-base font-extrabold text-slate-900 tracking-tight truncate mt-0.5">
+            <h1
+              className="text-xs sm:text-sm md:text-base font-extrabold text-slate-900 tracking-tight truncate mt-0.5"
+              title={schoolInfo.name}
+            >
               {schoolInfo.name}
             </h1>
           </div>
         </div>
 
-        {/* 2. Middle: Đồng hồ số & Lịch điện tử tinh tế, nhỏ gọn */}
-        {(() => {
-          const dayNames = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-          const dayOfWeekName = dayNames[currentTime.getDay()];
-          const timeHours = String(currentTime.getHours()).padStart(2, '0');
-          const timeMinutes = String(currentTime.getMinutes()).padStart(2, '0');
-          const timeSeconds = String(currentTime.getSeconds()).padStart(2, '0');
-          const dateShort = `${String(currentTime.getDate()).padStart(2, '0')}/${String(currentTime.getMonth() + 1).padStart(2, '0')}/${currentTime.getFullYear()}`;
+        {/* 2. Right: Cụm Đồng Hồ & Lịch Điện Tử Tinh Tế, Nhỏ Gọn + Các Nút Thao Tác (Không bị che khuất) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          
+          {/* ĐỒNG HỒ SỐ & LỊCH ĐIỆN TỬ TINH TẾ, NHỎ GỌN */}
+          {(() => {
+            const dayNames = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+            const dayOfWeekName = dayNames[currentTime.getDay()];
+            const timeHours = String(currentTime.getHours()).padStart(2, '0');
+            const timeMinutes = String(currentTime.getMinutes()).padStart(2, '0');
+            const timeSeconds = String(currentTime.getSeconds()).padStart(2, '0');
+            const dateShort = `${String(currentTime.getDate()).padStart(2, '0')}/${String(currentTime.getMonth() + 1).padStart(2, '0')}/${currentTime.getFullYear()}`;
 
-          // Calendar Popover Grid calculations
-          const viewYear = calendarViewDate.getFullYear();
-          const viewMonth = calendarViewDate.getMonth();
-          const daysInViewMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-          const firstDayIndex = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7; // Monday = 0
-          const isCurrentViewTodayMonth =
-            viewMonth === currentTime.getMonth() && viewYear === currentTime.getFullYear();
+            // Calendar Popover Grid calculations
+            const viewYear = calendarViewDate.getFullYear();
+            const viewMonth = calendarViewDate.getMonth();
+            const daysInViewMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+            const firstDayIndex = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7; // Monday = 0
+            const isCurrentViewTodayMonth =
+              viewMonth === currentTime.getMonth() && viewYear === currentTime.getFullYear();
 
-          return (
-            <div className="relative" ref={calendarPopupRef}>
-              <button
-                type="button"
-                onClick={() => setIsCalendarPopupOpen(!isCalendarPopupOpen)}
-                title="Bấm để mở lịch điện tử & xem đồng hồ số chuẩn thời gian thực"
-                className={`group flex items-center gap-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl border transition-all cursor-pointer shadow-2xs select-none ${
-                  isCalendarPopupOpen
-                    ? 'bg-slate-100 border-emerald-500 ring-2 ring-emerald-500/20 text-slate-900'
-                    : 'bg-slate-50/90 hover:bg-slate-100/90 border-slate-200/90 text-slate-700'
-                }`}
-              >
-                {/* Live pulsating green dot */}
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-
-                {/* Digital Clock */}
-                <div className="flex items-center gap-1 font-mono text-xs sm:text-sm font-extrabold text-slate-900 tracking-tight">
-                  <Clock className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                  <span>{timeHours}</span>
-                  <span className="text-emerald-600 animate-pulse font-normal">:</span>
-                  <span>{timeMinutes}</span>
-                  <span className="hidden sm:inline text-slate-400 text-[10px] font-semibold">:{timeSeconds}</span>
-                </div>
-
-                {/* Vertical subtle divider */}
-                <span className="hidden md:inline-block h-3.5 w-px bg-slate-300/80"></span>
-
-                {/* Electronic Calendar Date */}
-                <div className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                  <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                  <span className="truncate">{dayOfWeekName}, {dateShort}</span>
-                </div>
-
-                {/* Dropdown Chevron */}
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 group-hover:text-slate-600 ${
-                    isCalendarPopupOpen ? 'rotate-180 text-emerald-700' : ''
+            return (
+              <div className="relative shrink-0" ref={calendarPopupRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsCalendarPopupOpen(!isCalendarPopupOpen)}
+                  title="Lịch điện tử & đồng hồ số thời gian thực (Bấm để xem lịch tháng chuẩn)"
+                  className={`group flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all cursor-pointer shadow-2xs select-none ${
+                    isCalendarPopupOpen
+                      ? 'bg-slate-100 border-emerald-500 ring-2 ring-emerald-500/20 text-slate-900'
+                      : 'bg-slate-50/90 hover:bg-slate-100/90 border-slate-200/90 text-slate-700'
                   }`}
-                />
-              </button>
+                >
+                  {/* Live pulsating green dot */}
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
 
-              {/* Electronic Calendar Popover Modal/Panel */}
-              {isCalendarPopupOpen && (
-                <div className="absolute left-1/2 -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:right-0 mt-2 w-76 sm:w-84 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  {/* Top Digital Display Banner */}
-                  <div className="p-3 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-xl mb-3 shadow-xs">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                      <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        Thời gian thực hệ thống
-                      </span>
-                      <span className="font-mono text-[10px] text-slate-400">GMT+7</span>
-                    </div>
-
-                    <div className="flex items-baseline justify-between">
-                      <div className="font-mono text-2xl sm:text-3xl font-black text-emerald-400 tracking-wider">
-                        {timeHours}:{timeMinutes}
-                        <span className="text-base text-emerald-200/90 font-bold ml-0.5">:{timeSeconds}</span>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs font-bold text-white">{dayOfWeekName}</div>
-                        <div className="text-[11px] text-slate-300 font-mono">{dateShort}</div>
-                      </div>
-                    </div>
+                  {/* Digital Clock */}
+                  <div className="flex items-center gap-0.5 font-mono text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                    <Clock className="w-3.5 h-3.5 text-emerald-700 shrink-0 mr-0.5" />
+                    <span>{timeHours}</span>
+                    <span className="text-emerald-600 animate-pulse font-normal">:</span>
+                    <span>{timeMinutes}</span>
+                    <span className="hidden xl:inline text-slate-400 text-[10px] font-semibold">:{timeSeconds}</span>
                   </div>
 
-                  {/* Calendar Month Navigation */}
-                  <div className="flex items-center justify-between px-1 mb-2">
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalendarViewDate(new Date(viewYear, viewMonth - 1, 1));
-                        }}
-                        className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 cursor-pointer"
-                        title="Tháng trước"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <span className="font-bold text-xs sm:text-sm text-slate-800 px-1">
-                        Tháng {viewMonth + 1}, {viewYear}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalendarViewDate(new Date(viewYear, viewMonth + 1, 1));
-                        }}
-                        className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 cursor-pointer"
-                        title="Tháng sau"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
+                  {/* Vertical subtle divider */}
+                  <span className="hidden sm:inline-block h-3.5 w-px bg-slate-300/80"></span>
 
-                    <button
-                      type="button"
-                      onClick={() => setCalendarViewDate(new Date())}
-                      className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-pointer transition-colors"
-                      title="Về tháng hiện tại"
-                    >
-                      Hôm nay
-                    </button>
+                  {/* Electronic Calendar Date */}
+                  <div className="hidden sm:flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-slate-700">
+                    <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span className="hidden lg:inline">{dayOfWeekName}, </span>
+                    <span className="font-mono">{dateShort}</span>
                   </div>
 
-                  {/* Weekday Labels */}
-                  <div className="grid grid-cols-7 gap-1 text-center font-bold text-[10.5px] text-slate-400 py-1 border-y border-slate-100 mb-1">
-                    {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((d, i) => (
-                      <div key={i} className={i >= 5 ? 'text-amber-600' : ''}>
-                        {d}
+                  {/* Dropdown Chevron */}
+                  <ChevronDown
+                    className={`w-3 h-3 text-slate-400 transition-transform duration-200 group-hover:text-slate-600 ${
+                      isCalendarPopupOpen ? 'rotate-180 text-emerald-700' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Electronic Calendar Popover Modal/Panel - Luôn neo phía phải, không bị che khuất */}
+                {isCalendarPopupOpen && (
+                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    {/* Top Digital Display Banner */}
+                    <div className="p-3 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-xl mb-3 shadow-xs">
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                        <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                          Thời gian thực hệ thống
+                        </span>
+                        <span className="font-mono text-[10px] text-slate-400">GMT+7</span>
                       </div>
-                    ))}
-                  </div>
 
-                  {/* Day Grid */}
-                  <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                    {Array.from({ length: firstDayIndex }).map((_, idx) => (
-                      <div key={`empty-${idx}`} className="h-7" />
-                    ))}
-
-                    {Array.from({ length: daysInViewMonth }).map((_, idx) => {
-                      const day = idx + 1;
-                      const isToday =
-                        isCurrentViewTodayMonth && day === currentTime.getDate();
-                      const dateObj = new Date(viewYear, viewMonth, day);
-                      const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
-
-                      return (
-                        <div
-                          key={day}
-                          className={`h-7 flex items-center justify-center rounded-lg text-[11px] font-medium transition-colors ${
-                            isToday
-                              ? 'bg-emerald-600 text-white font-black shadow-xs ring-1 ring-emerald-500'
-                              : isWeekend
-                              ? 'text-amber-700 hover:bg-amber-50'
-                              : 'text-slate-700 hover:bg-slate-100'
-                          }`}
-                        >
-                          {day}
+                      <div className="flex items-baseline justify-between">
+                        <div className="font-mono text-2xl sm:text-3xl font-black text-emerald-400 tracking-wider">
+                          {timeHours}:{timeMinutes}
+                          <span className="text-base text-emerald-200/90 font-bold ml-0.5">:{timeSeconds}</span>
                         </div>
-                      );
-                    })}
-                  </div>
+                        <div className="text-right">
+                          <div className="text-xs font-bold text-white">{dayOfWeekName}</div>
+                          <div className="text-[11px] text-slate-300 font-mono">{dateShort}</div>
+                        </div>
+                      </div>
+                    </div>
 
-                  {/* Footer Info */}
-                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10.5px] text-slate-500">
-                    <span className="truncate">Lịch chuẩn mầm non BGD&amp;ĐT</span>
-                    <button
-                      type="button"
-                      onClick={() => setIsCalendarPopupOpen(false)}
-                      className="font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
-                    >
-                      Đóng
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
+                    {/* Calendar Month Navigation */}
+                    <div className="flex items-center justify-between px-1 mb-2">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCalendarViewDate(new Date(viewYear, viewMonth - 1, 1));
+                          }}
+                          className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 cursor-pointer"
+                          title="Tháng trước"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <span className="font-bold text-xs sm:text-sm text-slate-800 px-1">
+                          Tháng {viewMonth + 1}, {viewYear}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCalendarViewDate(new Date(viewYear, viewMonth + 1, 1));
+                          }}
+                          className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 cursor-pointer"
+                          title="Tháng sau"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
 
-        {/* 3. Right: Action Buttons with Clear 3-Color Save/Sync State & Clean Settings */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setCalendarViewDate(new Date())}
+                        className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-pointer transition-colors"
+                        title="Về tháng hiện tại"
+                      >
+                        Hôm nay
+                      </button>
+                    </div>
+
+                    {/* Weekday Labels */}
+                    <div className="grid grid-cols-7 gap-1 text-center font-bold text-[10.5px] text-slate-400 py-1 border-y border-slate-100 mb-1">
+                      {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((d, i) => (
+                        <div key={i} className={i >= 5 ? 'text-amber-600' : ''}>
+                          {d}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Day Grid */}
+                    <div className="grid grid-cols-7 gap-1 text-center text-xs">
+                      {Array.from({ length: firstDayIndex }).map((_, idx) => (
+                        <div key={`empty-${idx}`} className="h-7" />
+                      ))}
+
+                      {Array.from({ length: daysInViewMonth }).map((_, idx) => {
+                        const day = idx + 1;
+                        const isToday =
+                          isCurrentViewTodayMonth && day === currentTime.getDate();
+                        const dateObj = new Date(viewYear, viewMonth, day);
+                        const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+
+                        return (
+                          <div
+                            key={day}
+                            className={`h-7 flex items-center justify-center rounded-lg text-[11px] font-medium transition-colors ${
+                              isToday
+                                ? 'bg-emerald-600 text-white font-black shadow-xs ring-1 ring-emerald-500'
+                                : isWeekend
+                                ? 'text-amber-700 hover:bg-amber-50'
+                                : 'text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            {day}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Footer Info */}
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10.5px] text-slate-500">
+                      <span className="truncate">Lịch chuẩn mầm non BGD&amp;ĐT</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsCalendarPopupOpen(false)}
+                        className="font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
+                      >
+                        Đóng
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           
           {/* PRIMARY ACTION: Save & Cloud Status (Màu xanh: đã đồng bộ | Màu cam: đang lưu | Màu đỏ: lỗi offline) */}
           {onSaveCloud && (

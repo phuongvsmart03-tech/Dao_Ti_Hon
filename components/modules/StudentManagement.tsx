@@ -536,7 +536,21 @@ export default function StudentManagement({
           students={records}
           onClose={() => setHeatmapOpen(false)}
           onUpdateAttendanceCount={(dateStr, present, absent) => {
-            console.log('Updated attendance for date', dateStr, present, absent);
+            // Đồng bộ điểm danh vào bộ nhớ máy
+            if (typeof window !== 'undefined') {
+              try {
+                const saved = JSON.parse(localStorage.getItem('preschool_custom_attendance') || '{}');
+                saved[dateStr] = {
+                  present,
+                  absent,
+                  note: `Cập nhật ngày ${dateStr}: ${present} bé có mặt, ${absent} bé nghỉ`,
+                  cleared: present === 0,
+                };
+                localStorage.setItem('preschool_custom_attendance', JSON.stringify(saved));
+              } catch (e) {
+                console.error('Lỗi khi lưu điểm danh:', e);
+              }
+            }
           }}
         />
       )}

@@ -157,7 +157,7 @@ export default function LightningModule({
   // Preview Modal In
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
-  // Lưu món ăn tùy chỉnh riêng cho từng ngày
+  // Lưu món ăn tùy chỉnh riêng cho từng ngày (Tự động lưu vĩnh viễn vào localStorage)
   const [customDishesByDate, setCustomDishesByDate] = useState<
     Record<
       string,
@@ -171,12 +171,50 @@ export default function LightningModule({
         afternoonSnack?: string;
       }
     >
-  >({});
+  >(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const saved = localStorage.getItem('lightning_custom_dishes');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
 
-  // Lưu số lượng suất Nhà Trẻ & Mẫu Giáo nhập riêng cho từng ngày
+  // Lưu số lượng suất Nhà Trẻ & Mẫu Giáo nhập riêng cho từng ngày (Tự động lưu vĩnh viễn vào localStorage)
   const [customCountsByDate, setCustomCountsByDate] = useState<
     Record<string, { nurseryCount?: number; kindergartenCount?: number }>
-  >({});
+  >(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const saved = localStorage.getItem('lightning_custom_counts');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Tự động ghi nhớ các món đã chỉnh sửa vào localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('lightning_custom_dishes', JSON.stringify(customDishesByDate));
+      } catch (err) {
+        console.error('Lỗi khi lưu món tùy chỉnh:', err);
+      }
+    }
+  }, [customDishesByDate]);
+
+  // Tự động ghi nhớ sĩ số suất ăn tùy chỉnh vào localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('lightning_custom_counts', JSON.stringify(customCountsByDate));
+      } catch (err) {
+        console.error('Lỗi khi lưu sĩ số tùy chỉnh:', err);
+      }
+    }
+  }, [customCountsByDate]);
 
   // Kho toàn bộ món ăn từ dish-library
   const [allDishes, setAllDishes] = useState<DishItem[]>(() => getStoredDishLibrary());
@@ -460,19 +498,38 @@ export default function LightningModule({
     setDailyAttendanceModalOpen(true);
   };
 
-  // Lưu điểm danh chi tiết từ DailyAttendanceModal
+  // Lưu điểm danh chi tiết từ DailyAttendanceModal (Lưu cả sĩ số và trạng thái từng bé)
   const handleSaveDailyAttendance = (
     dateStr: string,
     nurseryCountVal: number,
-    kindergartenCountVal: number
+    kindergartenCountVal: number,
+    studentStatusMap?: Record<string, 'Có mặt' | 'Nghỉ có phép' | 'Nghỉ không phép'>
   ) => {
-    setCustomCountsByDate((prev) => ({
-      ...prev,
-      [dateStr]: {
-        nurseryCount: nurseryCountVal,
-        kindergartenCount: kindergartenCountVal,
-      },
-    }));
+    setCustomCountsByDate((prev) => {
+      const updated = {
+        ...prev,
+        [dateStr]: {
+          nurseryCount: nurseryCountVal,
+          kindergartenCount: kindergartenCountVal,
+        },
+      };
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('lightning_custom_counts', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    if (studentStatusMap && typeof window !== 'undefined') {
+      try {
+        const savedStatuses = JSON.parse(localStorage.getItem('preschool_daily_student_statuses') || '{}');
+        savedStatuses[dateStr] = studentStatusMap;
+        localStorage.setItem('preschool_daily_student_statuses', JSON.stringify(savedStatuses));
+      } catch (e) {
+        console.error('Lỗi lưu chi tiết điểm danh học sinh:', e);
+      }
+    }
   };
 
   // Bộ sinh hồ sơ tự động từ Menu (kết hợp tùy chỉnh món & suất ăn từng ngày)
@@ -1151,6 +1208,10 @@ export default function LightningModule({
                 onClick={() => {
                   setCustomDishesByDate({});
                   setCustomCountsByDate({});
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('lightning_custom_dishes');
+                    localStorage.removeItem('lightning_custom_counts');
+                  }
                 }}
                 className="text-xs font-semibold text-slate-600 hover:text-slate-800 flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 cursor-pointer transition-colors"
                 title="Khôi phục toàn bộ về mặc định ban đầu"

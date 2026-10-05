@@ -184,10 +184,24 @@ export default function MainPage() {
     showToast('Đã xóa sạch toàn bộ data mẫu. Hệ thống sẵn sàng để bạn tự nhập dữ liệu thực tế!', 'success');
   }, [showToast]);
 
-  // Quick Save & Sync to Turso Cloud handler with green success confirmation
+  // Quick Save & Sync to Turso Cloud handler with guaranteed local storage
   const handleQuickSaveAndSync = async () => {
     setIsSavingCloud(true);
     try {
+      // 1. Luôn ghi nhớ an toàn 100% dữ liệu của toàn bộ 9 phân hệ vào bộ nhớ máy (localStorage)
+      saveSchoolInfo(schoolInfo);
+      moduleStorage.saveStep1(step1Data);
+      moduleStorage.saveStep2(step2Data);
+      moduleStorage.saveStep3(step3Data);
+      moduleStorage.saveMenu(menuData);
+      moduleStorage.saveSamples(samplesData);
+      moduleStorage.saveStudents(studentsData);
+      moduleStorage.saveHealth(healthData);
+      moduleStorage.saveStaff(staffData);
+      moduleStorage.saveLessons(lessonsData);
+      moduleStorage.saveSalaries(salariesData);
+      moduleStorage.saveTransactions(transactionsData);
+
       showToast('⏳ Đang lưu dữ liệu và đồng bộ lên đám mây Turso...', 'info');
       await handleSyncToCloud();
       moduleStorage.addAuditLog({
@@ -195,13 +209,13 @@ export default function MainPage() {
         actionLabel: 'Đồng bộ',
         module: activeModuleId,
         moduleName: activeModuleConfig.label,
-        description: `Đồng bộ toàn bộ cơ sở dữ liệu lên đám mây Turso Cloud`,
+        description: `Đã lưu toàn bộ dữ liệu 9 phân hệ và đồng bộ đám mây Turso Cloud`,
         canUndo: false,
       });
       setAuditLogs(moduleStorage.getAuditLogs());
-      showToast('✅ Đã lưu dữ liệu và đồng bộ Turso Cloud thành công!', 'success');
+      showToast('✅ Đã lưu toàn bộ dữ liệu máy & đồng bộ đám mây thành công!', 'success');
     } catch (err: any) {
-      showToast('⚠️ Đã lưu vào bộ nhớ máy (Offline). Đám mây: ' + (err?.message || 'Không có kết nối'), 'info');
+      showToast('✅ Đã lưu an toàn toàn bộ dữ liệu vào bộ nhớ máy (Offline). Đám mây: ' + (err?.message || 'Chưa cấu hình'), 'success');
     } finally {
       setIsSavingCloud(false);
     }
@@ -1303,7 +1317,7 @@ export default function MainPage() {
       {/* 2. Main Content Column - Automatically offset by Sidebar width on desktop */}
       <div
         className={`flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-300 ease-in-out ${
-          isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72 sm:lg:pl-80'
+          isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72 xl:pl-80'
         }`}
       >
         {/* Top Header Bar - Clean SaaS Glass Bar, Perfectly Aligned */}

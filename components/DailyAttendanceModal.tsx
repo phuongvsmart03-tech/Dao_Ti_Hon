@@ -67,10 +67,29 @@ export default function DailyAttendanceModal({
 }: DailyAttendanceModalProps) {
   const [selectedDate, setSelectedDate] = useState<string>(initialDate || new Date().toISOString().split('T')[0]);
 
-  // Bộ nhớ tạm thời lưu điểm danh học sinh theo ngày: [dateStr][studentId] = status
+  // Bộ nhớ lưu điểm danh học sinh theo ngày: [dateStr][studentId] = status (Lưu vĩnh viễn vào localStorage)
   const [dailyAttendanceState, setDailyAttendanceState] = useState<
     Record<string, Record<string, 'Có mặt' | 'Nghỉ có phép' | 'Nghỉ không phép'>>
-  >({});
+  >(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('preschool_daily_student_statuses');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return {};
+  });
+
+  // Tự động lưu mọi thay đổi điểm danh học sinh vào localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && Object.keys(dailyAttendanceState).length > 0) {
+      try {
+        localStorage.setItem('preschool_daily_student_statuses', JSON.stringify(dailyAttendanceState));
+      } catch (e) {
+        console.error('Lỗi khi lưu điểm danh học sinh:', e);
+      }
+    }
+  }, [dailyAttendanceState]);
 
   // Sĩ số Nhà trẻ & Mẫu giáo cho ngày đang chọn
   const [currentNurseryCount, setCurrentNurseryCount] = useState<number>(defaultNurseryCount);
@@ -91,50 +110,45 @@ export default function DailyAttendanceModal({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Cập nhật ngày khi initialDate thay đổi
-  useEffect(() => {
+  // Điều chỉnh ngày khi initialDate thay đổi theo khuyến nghị React (không dùng useEffect)
+  const [prevInitialDate, setPrevInitialDate] = useState(initialDate);
+  if (initialDate !== prevInitialDate) {
+    setPrevInitialDate(initialDate);
     if (initialDate) {
       setSelectedDate(initialDate);
     }
-  }, [initialDate]);
+  }
 
-  // Khi chuyển sang 1 ngày khác: Khởi tạo dữ liệu điểm danh và số lượng
+  // Khi chuyển sang 1 ngày khác: Khởi tạo dữ liệu số lượng
   useEffect(() => {
     if (!selectedDate) return;
 
-    // 1. Kiểm tra xem ngày này đã có sĩ số tùy chỉnh trong customCountsByDate chưa
-    const savedCounts = customCountsByDate[selectedDate];
-    if (savedCounts) {
-      if (savedCounts.nurseryCount !== undefined) setCurrentNurseryCount(savedCounts.nurseryCount);
-      if (savedCounts.kindergartenCount !== undefined) setCurrentKindergartenCount(savedCounts.kindergartenCount);
-    } else {
-      // Dùng số mặc định
-      setCurrentNurseryCount(defaultNurseryCount);
-      setCurrentKindergartenCount(defaultKindergartenCount);
+    // Kiểm tra xem ngày này đã có sĩ số tùy chỉnh trong customCountsByDate chưa
+    const timer = setTimeout(() => {
+      const savedCounts = customCountsByDate[selectedDate];
+      if (savedCounts) {
+        if (savedCounts.nurseryCount !== undefined) setCurrentNurseryCount(savedCounts.nurseryCount);
+        if (savedCounts.kindergartenCount !== undefined) setCurrentKindergartenCount(savedCounts.kindergartenCount);
+      } else {
+        setCurrentNurseryCount(defaultNurseryCount);
+        setCurrentKindergartenCount(defaultKindergartenCount);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [selectedDate, customCountsByDate, defaultNurseryCount, defaultKindergartenCount]);
+
+  // Lấy trạng thái điểm danh hiện tại của ngày đang chọn (Mặc định 'Có mặt' nếu chưa điểm danh)
+  const currentDayMap = useMemo(() => {
+    if (dailyAttendanceState[selectedDate]) {
+      return dailyAttendanceState[selectedDate];
     }
-
-    // 2. Kiểm tra xem ngày này đã có trạng thái chi tiết của từng bé chưa
-    setDailyAttendanceState((prev) => {
-      if (prev[selectedDate]) return prev;
-
-      // Khởi tạo mặc định cho ngày này:
-      // Mặc định tất cả các bé đều Có mặt
-      const initialMap: Record<string, 'Có mặt' | 'Nghỉ có phép' | 'Nghỉ không phép'> = {};
-      students.forEach((s) => {
-        initialMap[s.id] = s.attendanceStatus || 'Có mặt';
-      });
-
-      return {
-        ...prev,
-        [selectedDate]: initialMap,
-      };
+    const initialMap: Record<string, 'Có mặt' | 'Nghỉ có phép' | 'Nghỉ không phép'> = {};
+    students.forEach((s) => {
+      initialMap[s.id] = s.attendanceStatus || 'Có mặt';
     });
-  }, [selectedDate, customCountsByDate, defaultNurseryCount, defaultKindergartenCount, students]);
-
-  if (!isOpen) return null;
-
-  // Lấy trạng thái điểm danh hiện tại của ngày đang chọn
-  const currentDayMap = dailyAttendanceState[selectedDate] || {};
+    return initialMap;
+  }, [dailyAttendanceState, selectedDate, students]);
 
   // Phân loại danh sách học sinh theo khối
   const isNurseryStudent = (s: StudentRecord) => {
@@ -318,6 +332,8 @@ export default function DailyAttendanceModal({
 
   const dayInfo = getDayInfo(selectedDate);
   const totalMoney = currentNurseryCount * nurseryPrice + currentKindergartenCount * kindergartenPrice;
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">

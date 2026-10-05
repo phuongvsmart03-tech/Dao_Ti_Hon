@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   Calendar,
@@ -51,10 +51,16 @@ export default function AttendanceHeatmapModal({
   // Xác nhận xóa trắng
   const [clearConfirmScope, setClearConfirmScope] = useState<'day' | 'week' | 'month' | null>(null);
 
-  // Bộ nhớ tùy chỉnh số lượng theo ngày: key = YYYY-MM-DD
+  // Bộ nhớ tùy chỉnh số lượng theo ngày: key = YYYY-MM-DD (Tự động lưu vĩnh viễn vào localStorage)
   const [customAttendance, setCustomAttendance] = useState<
     Record<string, { present: number; absent: number; note: string; cleared?: boolean }>
   >(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('preschool_custom_attendance');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
     const defaultPresent = Math.round(students.length * 0.92) || 145;
     const defaultAbsent = Math.max(0, students.length - defaultPresent) || 12;
     return {
@@ -63,10 +69,40 @@ export default function AttendanceHeatmapModal({
     };
   });
 
-  // Lưu trạng thái điểm danh chi tiết từng học sinh theo ngày: [dateKey][studentId] = status
+  // Lưu trạng thái điểm danh chi tiết từng học sinh theo ngày: [dateKey][studentId] = status (Lưu vĩnh viễn)
   const [dailyStudentStatuses, setDailyStudentStatuses] = useState<
     Record<string, Record<string, 'Có mặt' | 'Nghỉ có phép' | 'Nghỉ không phép'>>
-  >({});
+  >(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('preschool_daily_student_statuses');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return {};
+  });
+
+  // Tự động lưu sĩ số điểm danh heatmap vào localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('preschool_custom_attendance', JSON.stringify(customAttendance));
+      } catch (err) {
+        console.error('Lỗi khi lưu customAttendance:', err);
+      }
+    }
+  }, [customAttendance]);
+
+  // Tự động lưu trạng thái từng học sinh theo ngày vào localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && Object.keys(dailyStudentStatuses).length > 0) {
+      try {
+        localStorage.setItem('preschool_daily_student_statuses', JSON.stringify(dailyStudentStatuses));
+      } catch (err) {
+        console.error('Lỗi khi lưu dailyStudentStatuses:', err);
+      }
+    }
+  }, [dailyStudentStatuses]);
 
   // Dữ liệu chỉnh sửa tạm của ngày được chọn
   const [editPresent, setEditPresent] = useState<number>(Math.max(1, students.length - 8));

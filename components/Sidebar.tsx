@@ -203,7 +203,7 @@ export default function Sidebar({
       <aside
         className={`fixed top-0 bottom-0 left-0 z-40 h-screen bg-gradient-to-b from-[#133246] via-[#0e3b44] to-[#0a2e36] text-white flex flex-col border-r border-[#1e4a55] shadow-xl transition-all duration-300 ease-in-out lg:translate-x-0 ${
           isOpenMobile ? 'translate-x-0 w-72 sm:w-80 shadow-2xl' : '-translate-x-full'
-        } ${isCollapsed ? 'lg:w-20' : 'lg:w-72 sm:lg:w-80'}`}
+        } ${isCollapsed ? 'lg:w-20' : 'lg:w-72 xl:w-80'}`}
       >
         {/* Top Header inside Sidebar with Preschool Vibe - Height matches Header (h-16) */}
         <div
