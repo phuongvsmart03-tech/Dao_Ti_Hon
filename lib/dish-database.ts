@@ -269,6 +269,18 @@ export const STANDARDIZED_DISH_DATABASE: Record<string, DishIngredient[]> = {
     { name: 'Đường cát Biên Hòa', type: 'kho', unit: 'kg', role: 'Gia vị', rawPerPortionGrams: 2, cleanPerPortionGrams: 2, pricePerKg: 26000, protein: 0, fat: 0, carbs: 2, calories: 8, producerName: PRODUCERS.SUGAR.name, producerAddress: PRODUCERS.SUGAR.address, supplierName: SUPPLIERS.DRY_SPICE.name, supplierAddress: SUPPLIERS.DRY_SPICE.address, supplierPhone: SUPPLIERS.DRY_SPICE.phone, delivererName: SUPPLIERS.DRY_SPICE.deliverer },
   ],
 
+  'Nước Chanh': [
+    { name: 'Chanh tươi mọng nước (vắt lấy nước cốt)', type: 'tuoi_song', unit: 'kg', role: 'NL chính', rawPerPortionGrams: 25, cleanPerPortionGrams: 20, wasteRate: 20, pricePerKg: 32000, protein: 0.22, fat: 0.06, carbs: 1.86, calories: 5.8, supplierName: SUPPLIERS.VEGGIE.name, supplierAddress: SUPPLIERS.VEGGIE.address, supplierPhone: SUPPLIERS.VEGGIE.phone, delivererName: SUPPLIERS.VEGGIE.deliverer },
+    { name: 'Đường kính trắng Biên Hòa', type: 'kho', unit: 'kg', role: 'Gia vị', rawPerPortionGrams: 10, cleanPerPortionGrams: 10, pricePerKg: 26000, protein: 0, fat: 0, carbs: 9.95, calories: 39.7, producerName: PRODUCERS.SUGAR.name, producerAddress: PRODUCERS.SUGAR.address, supplierName: SUPPLIERS.DRY_SPICE.name, supplierAddress: SUPPLIERS.DRY_SPICE.address, supplierPhone: SUPPLIERS.DRY_SPICE.phone, delivererName: SUPPLIERS.DRY_SPICE.deliverer },
+    { name: 'Nước lọc đun sôi để nguội tiệt trùng', type: 'kho', unit: 'lít', role: 'NL phụ', rawPerPortionGrams: 120, cleanPerPortionGrams: 120, pricePerKg: 2000, protein: 0, fat: 0, carbs: 0, calories: 0, producerName: 'Hệ thống lọc nước tinh khiết học đường', producerAddress: 'Bếp bán trú', supplierName: 'Nhà trường tự cung cấp', supplierAddress: 'Bếp ăn mầm non', supplierPhone: '024 3388 9911', delivererName: 'Cấp dưỡng nhà trường' },
+  ],
+
+  'Nước chanh tươi': [
+    { name: 'Chanh tươi quả mọng nước', type: 'tuoi_song', unit: 'kg', role: 'NL chính', rawPerPortionGrams: 25, cleanPerPortionGrams: 20, wasteRate: 20, pricePerKg: 32000, protein: 0.22, fat: 0.06, carbs: 1.86, calories: 5.8, supplierName: SUPPLIERS.VEGGIE.name, supplierAddress: SUPPLIERS.VEGGIE.address, supplierPhone: SUPPLIERS.VEGGIE.phone, delivererName: SUPPLIERS.VEGGIE.deliverer },
+    { name: 'Đường kính trắng Biên Hòa', type: 'kho', unit: 'kg', role: 'Gia vị', rawPerPortionGrams: 10, cleanPerPortionGrams: 10, pricePerKg: 26000, protein: 0, fat: 0, carbs: 9.95, calories: 39.7, producerName: PRODUCERS.SUGAR.name, producerAddress: PRODUCERS.SUGAR.address, supplierName: SUPPLIERS.DRY_SPICE.name, supplierAddress: SUPPLIERS.DRY_SPICE.address, supplierPhone: SUPPLIERS.DRY_SPICE.phone, delivererName: SUPPLIERS.DRY_SPICE.deliverer },
+    { name: 'Nước lọc đun sôi để nguội', type: 'kho', unit: 'lít', role: 'NL phụ', rawPerPortionGrams: 120, cleanPerPortionGrams: 120, pricePerKg: 2000, protein: 0, fat: 0, carbs: 0, calories: 0, producerName: 'Hệ thống lọc RO học đường', producerAddress: 'Bếp bán trú', supplierName: 'Nhà trường', supplierAddress: 'Bếp ăn mầm non', supplierPhone: '024 3388 9911', delivererName: 'Cấp dưỡng' },
+  ],
+
   'Nước Dừa': [
     { name: 'Nước dừa xiêm tươi', type: 'tuoi_song', unit: 'lít', role: 'NL chính', rawPerPortionGrams: 150, cleanPerPortionGrams: 150, pricePerKg: 28000, protein: 1.05, fat: 0.3, carbs: 5.55, calories: 29.1, supplierName: 'Đại lý Dừa Xiêm Bến Tre', supplierAddress: 'Chợ Long Biên, Hà Nội', supplierPhone: '0988 223 344', delivererName: 'Trần Văn Hải' },
     { name: 'Cơm dừa non nạo', type: 'tuoi_song', unit: 'kg', role: 'NL chính', rawPerPortionGrams: 10, cleanPerPortionGrams: 10, pricePerKg: 40000, protein: 0.33, fat: 1.52, carbs: 0.5, calories: 17, supplierName: 'Đại lý Dừa Xiêm Bến Tre', supplierAddress: 'Chợ Long Biên, Hà Nội', supplierPhone: '0988 223 344', delivererName: 'Trần Văn Hải' },
@@ -317,9 +329,42 @@ export const STANDARDIZED_DISH_DATABASE: Record<string, DishIngredient[]> = {
 };
 
 // Hàm chuẩn truy xuất thành phần món ăn bám sát dữ liệu gốc
-export function getStandardizedIngredientsForDish(dishName: string): DishIngredient[] {
-  if (!dishName) return STANDARDIZED_DISH_DATABASE['Thịt lợn rim nấm đông cô'];
-  const trimmed = dishName.trim();
+export function getStandardizedIngredientsForDish(dishName: string, category?: string): DishIngredient[] {
+  const trimmed = (dishName || '').trim();
+  const lower = trimmed.toLowerCase();
+
+  // 0. Ưu tiên hàng đầu cho Đồ uống, Nước ép & Trái cây (Tuyệt đối không nhầm sang món mặn)
+  if (
+    lower.includes('chanh') ||
+    lower.includes('tắc') ||
+    lower.includes('quất')
+  ) {
+    return STANDARDIZED_DISH_DATABASE['Nước Chanh'];
+  }
+  if (lower.includes('nước cam') || (lower.includes('cam') && !lower.includes('thịt') && !lower.includes('sốt'))) {
+    return STANDARDIZED_DISH_DATABASE['Nước Cam'];
+  }
+  if (lower.includes('sinh tố') || lower.includes('nước ép')) {
+    return STANDARDIZED_DISH_DATABASE['Sinh tố trái cây theo mùa'];
+  }
+  if (lower.includes('nước mía')) {
+    return STANDARDIZED_DISH_DATABASE['Nước Mía'];
+  }
+  if (lower.includes('nước sâm') || lower.includes('sâm')) {
+    return STANDARDIZED_DISH_DATABASE['Nước Sâm'];
+  }
+  if (lower.includes('nước dừa')) {
+    return STANDARDIZED_DISH_DATABASE['Nước Dừa'];
+  }
+  if (category === 'Đồ uống & Nước ép') {
+    return STANDARDIZED_DISH_DATABASE['Nước Chanh'];
+  }
+
+  if (!trimmed) {
+    if (category === 'Tráng miệng') return STANDARDIZED_DISH_DATABASE['Bánh chuối'];
+    if (category === 'Món canh') return STANDARDIZED_DISH_DATABASE['Canh cua mồng tơi mướp hương'];
+    return STANDARDIZED_DISH_DATABASE['Thịt lợn rim nấm đông cô'];
+  }
 
   // 1. Khớp chính xác
   if (STANDARDIZED_DISH_DATABASE[trimmed]) {
@@ -329,6 +374,7 @@ export function getStandardizedIngredientsForDish(dishName: string): DishIngredi
   // 2. Khớp tương đối không phân biệt hoa thường
   for (const key of Object.keys(STANDARDIZED_DISH_DATABASE)) {
     if (
+      trimmed.toLowerCase() === key.toLowerCase() ||
       trimmed.toLowerCase().includes(key.toLowerCase()) ||
       key.toLowerCase().includes(trimmed.toLowerCase())
     ) {
@@ -336,8 +382,11 @@ export function getStandardizedIngredientsForDish(dishName: string): DishIngredi
     }
   }
 
-  // 3. Fallback thông minh theo từ khóa dinh dưỡng
-  const lower = trimmed.toLowerCase();
+  // 3. Fallback thông minh theo từ khóa đồ uống & chanh
+  if (lower.includes('chanh')) {
+    return STANDARDIZED_DISH_DATABASE['Nước Chanh'];
+  }
+
   if (lower.includes('basa') || (lower.includes('cá') && lower.includes('kho'))) {
     return STANDARDIZED_DISH_DATABASE['Cá Basa kho thơm'];
   }
@@ -441,6 +490,23 @@ export function getStandardizedIngredientsForDish(dishName: string): DishIngredi
     return STANDARDIZED_DISH_DATABASE['Bánh flan caramen + Sữa hạt óc chó'];
   }
 
-  // Mặc định trả về món mặn dinh dưỡng hoàn chỉnh có cả thực phẩm tươi sống + đồ khô/gia vị
+  // 4. Phân loại theo Category để không bao giờ gán nhầm món mặn vào đồ uống/tráng miệng
+  if (category === 'Đồ uống & Nước ép' || lower.includes('nước') || lower.includes('uống') || lower.includes('sinh tố') || lower.includes('ép')) {
+    return STANDARDIZED_DISH_DATABASE['Nước Chanh'];
+  }
+  if (category === 'Tráng miệng' || lower.includes('tráng miệng') || lower.includes('hoa quả') || lower.includes('chè')) {
+    return STANDARDIZED_DISH_DATABASE['Bánh chuối'];
+  }
+  if (category === 'Món canh') {
+    return STANDARDIZED_DISH_DATABASE['Canh cua mồng tơi mướp hương'];
+  }
+  if (category === 'Món ăn kèm & Cơm') {
+    return STANDARDIZED_DISH_DATABASE['Cơm trắng gạo tám thơm'];
+  }
+  if (category === 'Bữa sáng & Bữa xế') {
+    return STANDARDIZED_DISH_DATABASE['Cháo thịt bằm'];
+  }
+
+  // Mặc định trả về món mặn dinh dưỡng hoàn chỉnh
   return STANDARDIZED_DISH_DATABASE['Thịt lợn rim nấm đông cô'];
 }

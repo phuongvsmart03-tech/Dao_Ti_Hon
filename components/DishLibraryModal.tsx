@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   X,
   Search,
@@ -23,13 +23,23 @@ import {
   Loader2,
   ChefHat,
   Info,
+  RefreshCw,
+  Download,
+  Upload,
+  CloudCheck,
+  Cloud,
 } from 'lucide-react';
 import { DishItem, DishCategory } from '@/types/preschool';
 import {
   getStoredDishLibrary,
   saveDishLibrary,
   resetDishLibraryToDefault,
+  fetchCloudDishLibrary,
+  syncAllDishesToCloud,
+  exportDishLibraryToJson,
+  importDishLibraryFromJson,
 } from '@/lib/dish-library';
+import { classifyDish } from '@/lib/dish-classifier';
 
 interface DishLibraryModalProps {
   isOpen: boolean;
@@ -55,6 +65,81 @@ export default function DishLibraryModal({
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto pull latest dishes from server on modal open (cross-device sync)
+  useEffect(() => {
+    if (isOpen) {
+      fetchCloudDishLibrary().then((dishes) => {
+        if (dishes && dishes.length > 0) {
+          setDishLibrary(dishes);
+        }
+      });
+    }
+  }, [isOpen]);
+
+  const showSyncNotice = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setSyncStatusMsg({ text, type });
+    setTimeout(() => setSyncStatusMsg(null), 3500);
+  };
+
+  // Real-time automatic classification when user types dish name
+  const handleDishNameChange = (name: string) => {
+    if (!name.trim()) {
+      setNewDish((prev) => ({ ...prev, name }));
+      return;
+    }
+    const classified = classifyDish(name);
+    setNewDish((prev) => ({
+      ...prev,
+      name,
+      category: classified.category,
+      defaultMealSlot: classified.defaultMealSlot,
+      nutritionTags: classified.nutritionTags,
+      caloriesEstimate: classified.caloriesEstimate,
+      description: classified.description,
+    }));
+  };
+
+  // Manual Cloud Sync
+  const handleManualSyncCloud = async () => {
+    setIsSyncingCloud(true);
+    try {
+      showSyncNotice('⏳ Đang đồng bộ kho món ăn với máy chủ...', 'info');
+      const synced = await fetchCloudDishLibrary();
+      setDishLibrary(synced);
+      await syncAllDishesToCloud(synced);
+      showSyncNotice(`✅ Đã đồng bộ thành công ${synced.length} món ăn từ máy chủ!`, 'success');
+    } catch (e: any) {
+      showSyncNotice('⚠️ Đồng bộ máy chủ thất bại: ' + e.message, 'error');
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  };
+
+  // Export JSON Backup
+  const handleExportJson = () => {
+    exportDishLibraryToJson(dishLibrary);
+    showSyncNotice('Đã xuất file sao lưu kho món ăn thành công!', 'success');
+  };
+
+  // Import JSON Backup
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const updated = await importDishLibraryFromJson(text);
+      setDishLibrary(updated);
+      showSyncNotice(`✅ Đã nhập thành công ${updated.length} món ăn từ file JSON!`, 'success');
+    } catch (err: any) {
+      showSyncNotice('❌ Lỗi khi đọc file: ' + err.message, 'error');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   // New Dish Form
   const [newDish, setNewDish] = useState<Partial<DishItem>>({
@@ -142,6 +227,11 @@ export default function DishLibraryModal({
       return;
     }
 
+    // Pre-classify before sending to ensure correct prompt context
+    const preClassified = classifyDish(name);
+    const categoryToSend = newDish.category || preClassified.category;
+    const slotToSend = newDish.defaultMealSlot || preClassified.defaultMealSlot;
+
     setIsAiAnalyzing(true);
     setAiAnalysisResult(null);
 
@@ -153,7 +243,8 @@ export default function DishLibraryModal({
           action: 'decompose_dish',
           payload: {
             dishName: name,
-            mealSlot: newDish.defaultMealSlot || 'lunchMain',
+            category: categoryToSend,
+            mealSlot: slotToSend,
             ageGroup: 'Mẫu giáo (3-6 tuổi)',
             studentCount: 80,
           },
@@ -166,74 +257,47 @@ export default function DishLibraryModal({
         if (data) {
           setAiAnalysisResult(data);
           
-          // Auto detect category
-          const lower = name.toLowerCase();
-          let detectedCategory: DishCategory = 'Món mặn chính';
-          let detectedSlot: any = 'lunchMain';
-
-          if (lower.includes('canh') || lower.includes('soup') || lower.includes('súp') || lower.includes('riêu')) {
-            detectedCategory = 'Món canh';
-            detectedSlot = 'lunchSoup';
-          } else if (lower.includes('chè') || lower.includes('chuối') || lower.includes('dưa') || lower.includes('xoài') || lower.includes('táo') || lower.includes('bưởi') || lower.includes('cam') && !lower.includes('thịt') && !lower.includes('sốt')) {
-            detectedCategory = 'Tráng miệng';
-            detectedSlot = 'lunchDessert';
-          } else if (lower.includes('sữa') || lower.includes('nước ép') || lower.includes('sinh tố') || lower.includes('nước cam')) {
-            detectedCategory = 'Đồ uống & Nước ép';
-            detectedSlot = 'snackMorning';
-          } else if (lower.includes('cháo') || lower.includes('bún') || lower.includes('phở') || lower.includes('miến') || lower.includes('bánh flan') || lower.includes('bánh bao') || lower.includes('bánh giò') || lower.includes('hủ tiếu')) {
-            detectedCategory = 'Bữa sáng & Bữa xế';
-            detectedSlot = 'breakfast';
-          } else if (lower.includes('cơm') || lower.includes('xôi')) {
-            detectedCategory = 'Món ăn kèm & Cơm';
-            detectedSlot = 'lunchStaple';
-          }
-
-          // Build tags
-          const tags: string[] = [];
-          if (lower.includes('cá') || lower.includes('tôm') || lower.includes('cua') || lower.includes('hải sản')) {
-            tags.push('Giàu đạm', 'Omega-3', 'Giàu canxi');
-          } else if (lower.includes('bò')) {
-            tags.push('Giàu sắt', 'Đạm cao', 'Bổ máu');
-          } else if (lower.includes('gà') || lower.includes('thịt')) {
-            tags.push('Giàu đạm', 'Dễ tiêu hóa');
-          } else if (lower.includes('rau') || lower.includes('bí') || lower.includes('củ')) {
-            tags.push('Giàu chất xơ', 'Vitamin A', 'Thanh mát');
-          } else {
-            tags.push('Dinh dưỡng mầm non', 'Dễ hấp thu');
-          }
-
-          const calo = data.totalCalories || Math.round((data.ingredients || []).reduce((acc: number, ing: any) => acc + (ing.caloriesPer100g || 100) * ((ing.rawGramsPerPortion || 30) / 100), 0)) || 140;
+          const finalCategory: DishCategory = data.category || categoryToSend || preClassified.category;
+          const finalSlot = data.mealSlot || slotToSend || preClassified.defaultMealSlot;
+          const calo = data.totalCalories || preClassified.caloriesEstimate || 120;
 
           setNewDish((prev) => ({
             ...prev,
-            category: detectedCategory,
-            defaultMealSlot: detectedSlot,
+            category: finalCategory,
+            defaultMealSlot: finalSlot,
             caloriesEstimate: calo > 0 ? calo : 150,
-            nutritionTags: tags,
-            description: data.cookingInstructions || `Món ăn giàu dinh dưỡng chuẩn mầm non, bóc tách gồm ${data.ingredients?.length || 2} nguyên liệu sạch.`,
+            nutritionTags: preClassified.nutritionTags,
+            description: data.cookingInstructions || preClassified.description,
+            ingredients: data.ingredients,
           }));
+
+          showSyncNotice(`✨ AI đã phân tích bóc tách thành công: nhóm ${finalCategory} (~${calo} Kcal)`, 'success');
         }
       }
     } catch (err) {
       console.error('AI Dish Analysis Error:', err);
+      showSyncNotice('⚠️ AI phân tích bị gián đoạn, đã áp dụng định mức chuẩn mầm non.', 'info');
     } finally {
       setIsAiAnalyzing(false);
     }
   };
 
-  const handleAddNewDish = (e: React.FormEvent) => {
+  const handleAddNewDish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDish.name) return;
+
+    const classified = classifyDish(newDish.name);
 
     const item: DishItem = {
       id: `dish-custom-${Date.now()}`,
       name: newDish.name.trim(),
-      category: (newDish.category as DishCategory) || 'Món mặn chính',
-      defaultMealSlot: newDish.defaultMealSlot || 'lunchMain',
+      category: (newDish.category as DishCategory) || classified.category || 'Món mặn chính',
+      defaultMealSlot: newDish.defaultMealSlot || classified.defaultMealSlot || 'lunchMain',
       suitableAge: newDish.suitableAge || 'Tất cả lứa tuổi',
-      nutritionTags: newDish.nutritionTags && newDish.nutritionTags.length > 0 ? newDish.nutritionTags : ['Dinh dưỡng'],
-      caloriesEstimate: Number(newDish.caloriesEstimate) || 120,
-      description: newDish.description || '',
+      nutritionTags: newDish.nutritionTags && newDish.nutritionTags.length > 0 ? newDish.nutritionTags : classified.nutritionTags,
+      caloriesEstimate: Number(newDish.caloriesEstimate) || classified.caloriesEstimate || 120,
+      description: newDish.description || classified.description || '',
+      ingredients: aiAnalysisResult?.ingredients || newDish.ingredients,
     };
 
     const updated = [item, ...dishLibrary];
@@ -243,6 +307,16 @@ export default function DishLibraryModal({
     setSelectedIds((prev) => new Set(prev).add(item.id));
     setIsAddingNew(false);
     setAiAnalysisResult(null);
+
+    // Sync to central cloud server immediately
+    syncAllDishesToCloud(updated).then((ok) => {
+      if (ok) {
+        showSyncNotice(`✅ Đã lưu món "${item.name}" và đồng bộ lên máy chủ thành công!`, 'success');
+      } else {
+        showSyncNotice(`Đã lưu món "${item.name}" vào bộ nhớ máy (Offline).`, 'info');
+      }
+    });
+
     setNewDish({
       name: '',
       category: 'Món mặn chính',
@@ -304,11 +378,46 @@ export default function DishLibraryModal({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept=".json"
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={handleManualSyncCloud}
+              disabled={isSyncingCloud}
+              title="Đồng bộ kho món ăn với Máy chủ trung tâm (Các máy khác sẽ nhận được ngay)"
+              className="px-2.5 py-1.5 text-xs text-blue-100 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 border border-white/20"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCloud ? 'animate-spin text-amber-300' : 'text-blue-200'}`} />
+              <span className="hidden md:inline">{isSyncingCloud ? 'Đang đồng bộ...' : 'Đồng bộ Máy chủ'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportJson}
+              title="Xuất kho món ăn ra file JSON sao lưu"
+              className="px-2 py-1.5 text-xs text-blue-100 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Xuất file</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              title="Nhập kho món ăn từ file JSON"
+              className="px-2 py-1.5 text-xs text-blue-100 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Nhập file</span>
+            </button>
             <button
               type="button"
               onClick={handleResetDefaults}
-              title="Khôi phục danh sách gốc"
+              title="Khôi phục danh sách 30 món chốt gốc của cơ sở"
               className="px-2.5 py-1.5 text-xs text-blue-100 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -323,6 +432,28 @@ export default function DishLibraryModal({
             </button>
           </div>
         </div>
+
+        {/* Sync notification banner */}
+        {syncStatusMsg && (
+          <div
+            className={`px-5 py-2 text-xs font-semibold flex items-center justify-between border-b ${
+              syncStatusMsg.type === 'success'
+                ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                : syncStatusMsg.type === 'error'
+                ? 'bg-rose-50 text-rose-900 border-rose-200'
+                : 'bg-blue-50 text-blue-900 border-blue-200'
+            }`}
+          >
+            <span>{syncStatusMsg.text}</span>
+            <button
+              type="button"
+              onClick={() => setSyncStatusMsg(null)}
+              className="text-slate-400 hover:text-slate-700 cursor-pointer ml-2"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Toolbar: Search, Category Pills, Action Buttons */}
         <div className="px-5 py-3 border-b border-slate-200 bg-slate-50 space-y-3">
@@ -431,9 +562,9 @@ export default function DishLibraryModal({
                   <input
                     type="text"
                     required
-                    placeholder="VD: Cá hồi sốt cam, Canh bí đao thịt bằm, Chè đậu đỏ..."
+                    placeholder="VD: Nước chanh, Nước cam, Sinh tố dưa hấu, Cá basa kho thơm, Canh cua..."
                     value={newDish.name}
-                    onChange={(e) => setNewDish({ ...newDish, name: e.target.value })}
+                    onChange={(e) => handleDishNameChange(e.target.value)}
                     className="flex-1 px-3 py-1.5 text-xs sm:text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 bg-white font-medium"
                   />
                   <button
@@ -456,6 +587,16 @@ export default function DishLibraryModal({
                     )}
                   </button>
                 </div>
+                {newDish.name?.trim() && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-indigo-800 bg-indigo-50/90 px-2 py-1 rounded-md border border-indigo-200 font-medium">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-400 shrink-0" />
+                    <span>AI tự động xếp nhóm: <strong className="text-indigo-950 font-bold">{newDish.category}</strong></span>
+                    <span>•</span>
+                    <span>Bữa ăn: <strong className="text-slate-800 font-bold">{newDish.defaultMealSlot === 'snackMorning' ? 'Phụ sáng' : newDish.defaultMealSlot === 'lunchSoup' ? 'Canh trưa' : newDish.defaultMealSlot === 'lunchDessert' ? 'Tráng miệng' : newDish.defaultMealSlot === 'breakfast' ? 'Bữa sáng' : newDish.defaultMealSlot === 'lunchStaple' ? 'Cơm / Món kèm' : 'Món mặn trưa'}</strong></span>
+                    <span>•</span>
+                    <span>Ước tính: <strong className="text-amber-800 font-bold font-mono">~{newDish.caloriesEstimate} Kcal</strong></span>
+                  </div>
+                )}
               </div>
 
               <div className="sm:col-span-3">

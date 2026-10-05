@@ -28,6 +28,12 @@ import {
 } from '@/lib/storage';
 
 import {
+  getStoredDishLibrary,
+  fetchCloudDishLibrary,
+  syncAllDishesToCloud,
+} from '@/lib/dish-library';
+
+import {
   initialSchoolInfo,
   initialStep1Records,
   initialStep2Records,
@@ -311,8 +317,9 @@ export default function MainPage() {
     showToast('Đã nạp mẫu lịch sử thao tác thành công!', 'success');
   };
 
-  // Check Turso connection on mount
+  // Check Turso connection on mount & auto-pull dishes across devices
   useEffect(() => {
+    fetchCloudDishLibrary().catch(() => {});
     fetch('/api/turso')
       .then((res) => res.json())
       .then((data) => {
@@ -334,12 +341,13 @@ export default function MainPage() {
       body: JSON.stringify({ action: 'save_school_info', payload: schoolInfo }),
     });
 
-    // 2. Sync all modules
+    // 2. Sync all modules + dish library
     const modulesToSync = [
       { moduleId: 'step1', items: step1Data },
       { moduleId: 'step2', items: step2Data },
       { moduleId: 'step3', items: step3Data },
       { moduleId: 'menu', items: menuData },
+      { moduleId: 'dish_library', items: getStoredDishLibrary() },
       { moduleId: 'samples', items: samplesData },
       { moduleId: 'students', items: studentsData },
       { moduleId: 'health', items: healthData },
@@ -356,16 +364,21 @@ export default function MainPage() {
         body: JSON.stringify({ action: 'sync_module', payload: mod }),
       });
     }
+
+    // Also sync dishes to central /api/dishes
+    await syncAllDishesToCloud();
   };
 
   const handlePullFromCloud = async () => {
     const res = await fetch('/api/turso');
     const result = await res.json();
-    if (!result.connected || !result.data) {
-      throw new Error(result.error || 'Không kết nối được với Turso');
+    if (!result.connected && !result.data && !result.step1) {
+      // Try pulling dishes from central server fallback
+      await fetchCloudDishLibrary();
+      throw new Error(result.error || 'Chưa cấu hình Turso Database, đã đồng bộ kho món ăn qua Server.');
     }
 
-    const { data } = result;
+    const data = result.data || result;
     if (data.schoolInfo) {
       setSchoolInfo(data.schoolInfo);
       saveSchoolInfo(data.schoolInfo);
@@ -382,38 +395,48 @@ export default function MainPage() {
       setStep3Data(data.step3);
       moduleStorage.saveStep3(data.step3);
     }
-    if (data.menu && data.menu.length > 0) {
-      setMenuData(data.menu);
-      moduleStorage.saveMenu(data.menu);
+    const menuList = data.menuItems || data.menu;
+    if (menuList && menuList.length > 0) {
+      setMenuData(menuList);
+      moduleStorage.saveMenu(menuList);
     }
-    if (data.samples && data.samples.length > 0) {
-      setSamplesData(data.samples);
-      moduleStorage.saveSamples(data.samples);
+    const sampleList = data.sampleDisposals || data.samples;
+    if (sampleList && sampleList.length > 0) {
+      setSamplesData(sampleList);
+      moduleStorage.saveSamples(sampleList);
     }
     if (data.students && data.students.length > 0) {
       setStudentsData(data.students);
       moduleStorage.saveStudents(data.students);
     }
-    if (data.health && data.health.length > 0) {
-      setHealthData(data.health);
-      moduleStorage.saveHealth(data.health);
+    const healthList = data.healthRecords || data.health;
+    if (healthList && healthList.length > 0) {
+      setHealthData(healthList);
+      moduleStorage.saveHealth(healthList);
     }
-    if (data.staff && data.staff.length > 0) {
-      setStaffData(data.staff);
-      moduleStorage.saveStaff(data.staff);
+    const staffList = data.staffMembers || data.staff;
+    if (staffList && staffList.length > 0) {
+      setStaffData(staffList);
+      moduleStorage.saveStaff(staffList);
     }
-    if (data.lessons && data.lessons.length > 0) {
-      setLessonsData(data.lessons);
-      moduleStorage.saveLessons(data.lessons);
+    const lessonList = data.lessonPlans || data.lessons;
+    if (lessonList && lessonList.length > 0) {
+      setLessonsData(lessonList);
+      moduleStorage.saveLessons(lessonList);
     }
-    if (data.salaries && data.salaries.length > 0) {
-      setSalariesData(data.salaries);
-      moduleStorage.saveSalaries(data.salaries);
+    const salaryList = data.teacherSalaries || data.salaries;
+    if (salaryList && salaryList.length > 0) {
+      setSalariesData(salaryList);
+      moduleStorage.saveSalaries(salaryList);
     }
-    if (data.transactions && data.transactions.length > 0) {
-      setTransactionsData(data.transactions);
-      moduleStorage.saveTransactions(data.transactions);
+    const transactionList = data.financeTransactions || data.transactions;
+    if (transactionList && transactionList.length > 0) {
+      setTransactionsData(transactionList);
+      moduleStorage.saveTransactions(transactionList);
     }
+
+    // Pull and update dish library
+    await fetchCloudDishLibrary();
   };
 
   // Handler to seed all initial test data across all 9 modules

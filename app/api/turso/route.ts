@@ -76,6 +76,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ connected: true, configured: true, financeTransactions, teacherSalaries });
     }
 
+    if (action === 'dish_library' || action === 'dishLibrary') {
+      const dishLibrary = await MenuService.getDishLibrary(db);
+      return NextResponse.json({ connected: true, configured: true, dishLibrary });
+    }
+
     // Default 'all': Tải dữ liệu toàn hệ thống (áp dụng bộ lọc thời gian nếu có)
     const [
       schoolInfo,
@@ -85,6 +90,7 @@ export async function GET(req: NextRequest) {
       sampleDisposals,
       menuItems,
       dishBreakdowns,
+      dishLibrary,
       students,
       healthRecords,
       staffMembers,
@@ -99,6 +105,7 @@ export async function GET(req: NextRequest) {
       InspectionService.getSampleDisposalRecords(db, { fromDate, toDate, month, limit, offset }),
       MenuService.getMenuItems(db, { month }),
       MenuService.getDishBreakdowns(db),
+      MenuService.getDishLibrary(db),
       StudentService.getStudents(db),
       StudentService.getHealthRecords(db),
       StaffLessonService.getStaffMembers(db),
@@ -117,6 +124,7 @@ export async function GET(req: NextRequest) {
       sampleDisposals,
       menuItems,
       dishBreakdowns,
+      dishLibrary,
       students,
       healthRecords,
       staffMembers,
@@ -129,6 +137,7 @@ export async function GET(req: NextRequest) {
         step3: step3.length,
         sampleDisposals: sampleDisposals.length,
         menuItems: menuItems.length,
+        dishLibrary: dishLibrary.length,
         students: students.length,
         healthRecords: healthRecords.length,
         staffMembers: staffMembers.length,
@@ -182,10 +191,11 @@ export async function POST(req: NextRequest) {
 
     // 1. Đồng bộ từng module (Sync Module with Upsert & LWW)
     if (action === 'sync_module') {
-      const targetData = data || payload;
+      const targetModule = moduleName || body.moduleId || body.payload?.moduleId;
+      const targetData = data || payload?.items || payload;
       let count = 0;
 
-      switch (moduleName) {
+      switch (targetModule) {
         case 'school_info':
           if (targetData) {
             await StaffLessonService.upsertSchoolInfo(db, targetData);
@@ -215,6 +225,7 @@ export async function POST(req: NextRequest) {
           break;
 
         case 'sample_disposals':
+        case 'samples':
           if (Array.isArray(targetData)) {
             const res = await InspectionService.upsertSampleDisposalsBatch(db, targetData);
             count = res.count;
@@ -222,6 +233,7 @@ export async function POST(req: NextRequest) {
           break;
 
         case 'menu_items':
+        case 'menu':
           if (Array.isArray(targetData)) {
             const res = await MenuService.upsertMenuItemsBatch(db, targetData);
             count = res.count;
@@ -235,6 +247,15 @@ export async function POST(req: NextRequest) {
           }
           break;
 
+        case 'dish_library':
+        case 'dishLibrary':
+        case 'dishes':
+          if (Array.isArray(targetData)) {
+            const res = await MenuService.upsertDishLibraryBatch(db, targetData);
+            count = res.count;
+          }
+          break;
+
         case 'students':
           if (Array.isArray(targetData)) {
             const res = await StudentService.upsertStudentsBatch(db, targetData);
@@ -243,6 +264,7 @@ export async function POST(req: NextRequest) {
           break;
 
         case 'student_health_records':
+        case 'health':
           if (Array.isArray(targetData)) {
             const res = await StudentService.upsertHealthRecordsBatch(db, targetData);
             count = res.count;
@@ -250,6 +272,7 @@ export async function POST(req: NextRequest) {
           break;
 
         case 'staff_members':
+        case 'staff':
           if (Array.isArray(targetData)) {
             const res = await StaffLessonService.upsertStaffBatch(db, targetData);
             count = res.count;
@@ -257,6 +280,7 @@ export async function POST(req: NextRequest) {
           break;
 
         case 'lesson_plans':
+        case 'lessonPlans':
           if (Array.isArray(targetData)) {
             const res = await StaffLessonService.upsertLessonPlansBatch(db, targetData);
             count = res.count;
@@ -264,6 +288,7 @@ export async function POST(req: NextRequest) {
           break;
 
         case 'teacher_salaries':
+        case 'salaries':
           if (Array.isArray(targetData)) {
             const res = await FinanceService.upsertSalariesBatch(db, targetData);
             count = res.count;
@@ -271,6 +296,7 @@ export async function POST(req: NextRequest) {
           break;
 
         case 'finance_transactions':
+        case 'finance':
           if (Array.isArray(targetData)) {
             const res = await FinanceService.upsertTransactionsBatch(db, targetData);
             count = res.count;
@@ -278,12 +304,12 @@ export async function POST(req: NextRequest) {
           break;
 
         default:
-          return NextResponse.json({ success: false, error: `Module '${moduleName}' không hợp lệ.` }, { status: 400 });
+          return NextResponse.json({ success: false, error: `Module '${targetModule}' không hợp lệ.` }, { status: 400 });
       }
 
       return NextResponse.json({
         success: true,
-        message: `Đồng bộ thành công ${count} bản ghi của phân hệ '${moduleName}'.`,
+        message: `Đồng bộ thành công ${count} bản ghi của phân hệ '${targetModule}'.`,
         count,
         syncedAt: new Date().toISOString(),
       });

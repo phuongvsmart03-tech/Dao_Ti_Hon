@@ -250,6 +250,19 @@ export const TABLE_DEFINITIONS: string[] = [
     default_portion_calories REAL,
     breakdown_json TEXT NOT NULL,
     updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+  )`,
+  `CREATE TABLE IF NOT EXISTS dish_library (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    default_meal_slot TEXT NOT NULL,
+    suitable_age TEXT,
+    nutrition_tags TEXT,
+    calories_estimate REAL,
+    description TEXT,
+    is_favorite INTEGER DEFAULT 0,
+    ingredients_json TEXT,
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
   )`
 ];
 
@@ -272,6 +285,7 @@ export async function ensureTablesInitialized(db: Client): Promise<void> {
     `ALTER TABLE teacher_salaries ADD COLUMN updated_at INTEGER DEFAULT 0;`,
     `ALTER TABLE finance_transactions ADD COLUMN updated_at INTEGER DEFAULT 0;`,
     `ALTER TABLE dish_breakdowns ADD COLUMN updated_at INTEGER DEFAULT 0;`,
+    `ALTER TABLE dish_library ADD COLUMN updated_at INTEGER DEFAULT 0;`,
   ];
 
   for (const mig of migrations) {

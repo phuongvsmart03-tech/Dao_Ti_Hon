@@ -34,15 +34,10 @@ async function callGroq(prompt: string, systemPrompt?: string, jsonMode = false)
   }
   messages.push({ role: 'user', content: prompt });
 
+  // Only use active, non-decommissioned Groq production models
   const candidateModels = [
     'llama-3.3-70b-versatile',
     'llama-3.1-8b-instant',
-    'qwen-2.5-32b',
-    'deepseek-r1-distill-llama-70b',
-    'llama-3.2-3b-preview',
-    'llama-3.2-1b-preview',
-    'llama-3.2-11b-vision-preview',
-    'llama-3.2-90b-vision-preview',
   ];
 
   let lastError: any = null;
@@ -71,7 +66,7 @@ async function callGroq(prompt: string, systemPrompt?: string, jsonMode = false)
 
       if (!res.ok) {
         const errText = await res.text();
-        // If decommissioned or not found, try next model silently
+        console.warn(`Groq API error on model ${model} (${res.status}): ${errText}`);
         throw new Error(`Groq API Error (${res.status}): ${errText}`);
       }
 
@@ -93,7 +88,7 @@ async function callGroq(prompt: string, systemPrompt?: string, jsonMode = false)
 }
 
 // Helper: Call Gemini API using @google/genai with automatic modern model fallback
-async function callGemini(prompt: string, systemPrompt?: string): Promise<{ text: string; modelUsed: string }> {
+async function callGemini(prompt: string, systemPrompt?: string, jsonMode = false): Promise<{ text: string; modelUsed: string }> {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) {
     throw new Error('GEMINI_API_KEY is not configured');
@@ -103,14 +98,11 @@ async function callGemini(prompt: string, systemPrompt?: string): Promise<{ text
   const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
 
   const candidateGeminiModels = [
-    'gemini-2.5-flash',
     'gemini-3.8-flash',
-    'gemini-3.1-flash-lite',
     'gemini-flash-latest',
+    'gemini-3.1-flash-lite',
     'gemini-3.1-pro-preview',
-    'gemini-2.5-flash-preview-12-2025',
-    'gemini-3.6-flash',
-    'gemini-3.5-flash',
+    'gemini-2.5-flash',
   ];
 
   let lastError: any = null;
@@ -120,6 +112,7 @@ async function callGemini(prompt: string, systemPrompt?: string): Promise<{ text
       const response = await ai.models.generateContent({
         model,
         contents: fullPrompt,
+        config: jsonMode ? { responseMimeType: 'application/json' } : undefined,
       });
 
       if (response.text) {
@@ -148,7 +141,7 @@ async function runAI(prompt: string, systemPrompt: string, jsonMode = false): Pr
   // Fallback to Gemini
   if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== '') {
     try {
-      const result = await callGemini(prompt, systemPrompt);
+      const result = await callGemini(prompt, systemPrompt, jsonMode);
       return { text: result.text, provider: `Google Gemini (${result.modelUsed})` };
     } catch (e: any) {
       console.warn('Gemini call failed:', e.message);
@@ -459,54 +452,103 @@ Hãy trả lời cô giáo và chủ trường bằng văn phong sư phạm ân 
       // 6. BÓC TÁCH THÀNH PHẦN NGUYÊN LIỆU MÓN ĂN (RECIPE BREAKDOWN ENGINE)
       case 'decompose_dish': {
         const { dishName, mealSlot, ageGroup, studentCount, targetPortionCost } = payload;
-        const systemPrompt = `Bạn là Chuyên gia Dinh dưỡng Nhi khoa & Bếp trưởng Bán trú Mầm non chuẩn quốc gia.
-Nhiệm vụ: Phân tích sâu 1 món ăn mầm non thành danh sách các NGUYÊN LIỆU CẤU THÀNH (BOM - Bill of Materials).
-Yêu cầu định mức:
-1. Định mức gram thô (rawGramsPerPortion) và gram tinh (cleanGramsPerPortion) cho 1 suất trẻ theo đúng chuẩn lứa tuổi ${ageGroup || 'Mẫu giáo (3-6 tuổi)'}.
-2. Tỷ lệ thải bỏ sơ chế (wasteRatePercent) chuẩn xác (ví dụ: tôm 25%, cá 15%, bí 12%, thịt 5-8%).
-3. Năng lượng Kcal, Đạm (Protein), Béo (Lipid), Bột đường (Glucid), Canxi, Sắt trên 100g nguyên liệu.
-4. Đơn giá thị trường Việt Nam (pricePerKg) chuẩn xác theo mặt bằng giá thực phẩm sạch.
+        const normalized = (dishName || '').toLowerCase().trim();
+        
+        // Smart Pre-Classification for AI Prompt
+        let detectedCategory = 'Món mặn chính';
+        let suggestedSlot = mealSlot || 'lunchMain';
+        if (
+          normalized.includes('nước chanh') ||
+          normalized.includes('chanh') ||
+          normalized.includes('nước cam') ||
+          normalized.includes('nước ép') ||
+          normalized.includes('sinh tố') ||
+          normalized.includes('sữa') ||
+          normalized.includes('sắn dây') ||
+          normalized.includes('nước dừa') ||
+          normalized.includes('nước mía')
+        ) {
+          detectedCategory = 'Đồ uống & Nước ép';
+          if (!mealSlot || mealSlot === 'lunchMain') suggestedSlot = 'snackMorning';
+        } else if (
+          normalized.includes('chuối') ||
+          normalized.includes('dưa hấu') ||
+          normalized.includes('đu đủ') ||
+          normalized.includes('xoài') ||
+          normalized.includes('thanh long') ||
+          normalized.includes('táo') ||
+          normalized.includes('chè') ||
+          normalized.includes('sữa chua') ||
+          normalized.includes('bánh flan')
+        ) {
+          detectedCategory = 'Tráng miệng';
+          if (!mealSlot || mealSlot === 'lunchMain') suggestedSlot = 'lunchDessert';
+        } else if (normalized.includes('canh') || normalized.includes('súp') || normalized.includes('soup') || normalized.includes('riêu')) {
+          detectedCategory = 'Món canh';
+          if (!mealSlot || mealSlot === 'lunchMain') suggestedSlot = 'lunchSoup';
+        } else if (normalized.includes('cháo') || normalized.includes('bún') || normalized.includes('phở') || normalized.includes('miến') || normalized.includes('bánh bao') || normalized.includes('bánh mì')) {
+          detectedCategory = 'Bữa sáng & Bữa xế';
+          if (!mealSlot || mealSlot === 'lunchMain') suggestedSlot = 'breakfast';
+        } else if (normalized.includes('cơm') || normalized.includes('xôi')) {
+          detectedCategory = 'Món ăn kèm & Cơm';
+          if (!mealSlot || mealSlot === 'lunchMain') suggestedSlot = 'lunchStaple';
+        }
 
-Hãy xuất kết quả ĐỊNH DẠNG JSON với cấu trúc chính xác:
+        const systemPrompt = `Bạn là Chuyên gia Dinh dưỡng Nhi khoa & Bếp trưởng Bán trú Mầm non chuẩn Bộ GD&ĐT và Bộ Y Tế.
+Nhiệm vụ: Phân tích sâu món ăn mầm non thành danh sách các NGUYÊN LIỆU CẤU THÀNH (BOM - Bill of Materials).
+ĐẶC BIỆT CHÚ Ý QUY TẮC PHÂN LOẠI MÓN ĂN:
+1. NẾU LÀ ĐỒ UỐNG / NƯỚC GIẢI KHÁT (ví dụ: Nước Chanh, Nước Cam, Sinh tố, Nước ép quả, Sữa hạt...):
+   - TUYỆT ĐỐI KHÔNG được cho thịt lợn, thịt bò, cá, hải sản, dầu ăn, nước mắm, hành tiêu mặn!
+   - Nguyên liệu PHẢI LÀ: Chanh tươi/Cam tươi/Trái cây sạch + Đường kính trắng/đường phèn sạch + Nước đun sôi để nguội (hoặc muối tinh nhẹ).
+   - Năng lượng: 40 - 70 Kcal/suất, Đạm ~ 0g, Béo ~ 0g, Bột đường (Glucid) ~ 10-15g.
+2. NẾU LÀ TRÁNG MIỆNG (Hoa quả tươi, chè, sữa chua):
+   - Hoa quả sạch rửa kỹ, gọt vỏ bỏ hạt, cắt hạt lựu hoặc chia miếng vừa miệng trẻ.
+3. NẾU LÀ MÓN CANH:
+   - Nước dùng ngọt tự nhiên, rau sạch cắt nhỏ ninh mềm, đạm (thịt/tôm/cua băm nhuyễn) nêm nhạt.
+4. NẾU LÀ MÓN MẶN:
+   - Thịt nạc, cá phi lê, tôm bóc nõn cắt nhỏ rim mềm, dầu thực vật an toàn.
+
+Định dạng JSON bắt buộc:
 {
   "dishName": "${dishName}",
-  "mealSlot": "${mealSlot || 'lunchMain'}",
-  "ageGroup": "${ageGroup || 'Mẫu giáo'}",
+  "category": "${detectedCategory}",
+  "mealSlot": "${suggestedSlot}",
+  "ageGroup": "${ageGroup || 'Mẫu giáo (3-6 tuổi)'}",
   "ingredients": [
     {
       "id": "ing-1",
-      "name": "Tên nguyên liệu cụ thể (vd: Thịt lợn nạc mông, Bí đỏ hồ lô)",
-      "category": "Thịt cá tươi sống" | "Thủy hải sản" | "Rau củ quả nấm" | "Gạo & ngũ cốc" | "Gia vị & dầu mỡ" | "Sữa & chế phẩm" | "Trái cây tráng miệng" | "Khác",
+      "name": "Tên nguyên liệu chuẩn (vd: Chanh tươi quả mọng nước, Đường kính trắng sạch...)",
+      "category": "Trái cây tráng miệng" | "Thịt cá tươi sống" | "Rau củ quả nấm" | "Gia vị & dầu mỡ" | "Gạo & ngũ cốc" | "Sữa & chế phẩm" | "Khác",
       "type": "tuoi_song" | "kho",
-      "unit": "kg" | "lít" | "quả" | "hộp",
-      "rawGramsPerPortion": 45,
-      "cleanGramsPerPortion": 40,
-      "wasteRatePercent": 11,
-      "pricePerKg": 135000,
-      "caloriesPer100g": 145,
-      "proteinPer100g": 19.0,
-      "lipidPer100g": 7.0,
-      "glucidPer100g": 0,
-      "calciumMg": 8,
-      "ironMg": 1.5,
-      "supplierName": "Vựa thực phẩm sạch / HTX Nông sản",
-      "notes": "Lưu ý sơ chế mầm non (vd: xay nhuyễn / thái hạt lựu nhỏ mềm)"
+      "unit": "kg" | "lít" | "quả",
+      "rawGramsPerPortion": 25,
+      "cleanGramsPerPortion": 20,
+      "wasteRatePercent": 20,
+      "pricePerKg": 30000,
+      "caloriesPer100g": 30,
+      "proteinPer100g": 0.3,
+      "lipidPer100g": 0.1,
+      "glucidPer100g": 7.0,
+      "calciumMg": 15,
+      "ironMg": 0.4,
+      "supplierName": "HTX Nông Sản / Vựa sạch",
+      "notes": "Vắt lấy nước cốt pha nước đường sạch"
     }
   ],
-  "totalCalories": 165,
-  "totalProteinGrams": 9.5,
-  "totalLipidGrams": 4.2,
-  "totalGlucidGrams": 8.0,
-  "estimatedCostPerPortion": 9500,
-  "cookingInstructions": "Hướng dẫn cấp dưỡng: sơ chế cắt nhỏ, nêm nhạt vừa khẩu vị trẻ nhỏ..."
+  "totalCalories": 55,
+  "totalProteinGrams": 0.2,
+  "totalLipidGrams": 0,
+  "totalGlucidGrams": 13.5,
+  "estimatedCostPerPortion": 3500,
+  "cookingInstructions": "Hướng dẫn cấp dưỡng chuẩn xác..."
 }`;
 
-        const userPrompt = `Hãy bóc tách chi tiết thành phần nguyên liệu cấu thành món: "${dishName || 'Thịt lợn rim ngũ vị'}"
-- Bữa ăn: ${mealSlot || 'Bữa trưa chính'}
+        const userPrompt = `Hãy bóc tách thành phần nguyên liệu cho món: "${dishName || 'Nước Chanh'}"
+- Phân nhóm: ${detectedCategory}
+- Khung bữa ăn: ${suggestedSlot}
 - Lứa tuổi: ${ageGroup || 'Mẫu giáo (3-6 tuổi)'}
-- Số lượng trẻ: ${studentCount || 80} trẻ
-- Dự toán chi phí: ${targetPortionCost || 10000} đ/suất
-Trả về JSON chuẩn.`;
+- Sĩ số: ${studentCount || 80} trẻ
+- Đảm bảo đúng bản chất món mầm non Việt Nam. Trả về JSON chuẩn.`;
 
         try {
           const { text, provider } = await runAI(userPrompt, systemPrompt, true);
@@ -515,11 +557,11 @@ Trả về JSON chuẩn.`;
             const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
             parsed = JSON.parse(cleanText);
           } catch {
-            parsed = generateFallbackDishDecomposition(dishName, mealSlot, ageGroup, studentCount);
+            parsed = generateFallbackDishDecomposition(dishName, suggestedSlot, ageGroup, studentCount);
           }
           return NextResponse.json({ success: true, data: parsed, provider });
         } catch (e: any) {
-          const fallbackData = generateFallbackDishDecomposition(dishName, mealSlot, ageGroup, studentCount);
+          const fallbackData = generateFallbackDishDecomposition(dishName, suggestedSlot, ageGroup, studentCount);
           return NextResponse.json({
             success: true,
             data: fallbackData,
@@ -883,9 +925,301 @@ function parseStep1Locally(text: string) {
 }
 
 function generateFallbackDishDecomposition(dishName: string, mealSlot: string, ageGroup: string, studentCount = 80): DishRecipeBreakdown {
-  const normalized = (dishName || '').toLowerCase();
+  const normalized = (dishName || '').toLowerCase().trim();
   const ingredients: FoodIngredient[] = [];
 
+  // ==========================================
+  // 1. NHÓM ĐỒ UỐNG & NƯỚC ÉP / GIẢI KHÁT
+  // ==========================================
+  if (
+    normalized.includes('nước chanh') ||
+    normalized.includes('chanh muối') ||
+    normalized.includes('chanh leo') ||
+    normalized.includes('tắc') ||
+    normalized.includes('nước cam') ||
+    normalized.includes('nước ép') ||
+    normalized.includes('sinh tố') ||
+    normalized.includes('sữa') ||
+    normalized.includes('sắn dây') ||
+    normalized.includes('nước mía') ||
+    normalized.includes('nước dừa') ||
+    normalized.includes('nước lọc')
+  ) {
+    if (normalized.includes('chanh')) {
+      // Nước chanh chuẩn mầm non
+      ingredients.push({
+        id: 'ing-1',
+        name: 'Chanh tươi quả mọng nước (vắt lấy nước cốt)',
+        category: 'Trái cây tráng miệng',
+        type: 'tuoi_song',
+        unit: 'kg',
+        rawGramsPerPortion: 25,
+        cleanGramsPerPortion: 20,
+        wasteRatePercent: 20,
+        pricePerKg: 32000,
+        caloriesPer100g: 29,
+        proteinPer100g: 1.1,
+        lipidPer100g: 0.3,
+        glucidPer100g: 9.3,
+        calciumMg: 26,
+        ironMg: 0.6,
+        supplierName: 'Vựa Trái Cây Sạch Tuy Phong',
+        notes: 'Chanh tươi vỏ mỏng, vắt nước cốt bỏ hạt, chống đắng',
+      });
+      ingredients.push({
+        id: 'ing-2',
+        name: 'Đường kính trắng / Đường phèn sạch Biên Hòa',
+        category: 'Gia vị & dầu mỡ',
+        type: 'kho',
+        unit: 'kg',
+        rawGramsPerPortion: 10,
+        cleanGramsPerPortion: 10,
+        wasteRatePercent: 0,
+        pricePerKg: 26000,
+        caloriesPer100g: 397,
+        proteinPer100g: 0,
+        lipidPer100g: 0,
+        glucidPer100g: 99.5,
+        calciumMg: 1,
+        ironMg: 0.1,
+        supplierName: 'Đại lý Bách Hóa Tuấn Mai',
+        notes: 'Đường tinh luyện sạch hòa tan tạo vị ngọt thanh dịu',
+      });
+      ingredients.push({
+        id: 'ing-3',
+        name: 'Nước lọc đun sôi để nguội tiệt trùng',
+        category: 'Khác',
+        type: 'kho',
+        unit: 'lít',
+        rawGramsPerPortion: 120,
+        cleanGramsPerPortion: 120,
+        wasteRatePercent: 0,
+        pricePerKg: 2000,
+        caloriesPer100g: 0,
+        proteinPer100g: 0,
+        lipidPer100g: 0,
+        glucidPer100g: 0,
+        calciumMg: 2,
+        ironMg: 0,
+        supplierName: 'Nguồn nước kiểm định ATTP của trường',
+        notes: 'Nước tinh khiết đun sôi để nguội',
+      });
+    } else if (normalized.includes('cam')) {
+      ingredients.push({
+        id: 'ing-1',
+        name: 'Cam sành tươi mọng nước (vắt nước)',
+        category: 'Trái cây tráng miệng',
+        type: 'tuoi_song',
+        unit: 'kg',
+        rawGramsPerPortion: 60,
+        cleanGramsPerPortion: 45,
+        wasteRatePercent: 25,
+        pricePerKg: 35000,
+        caloriesPer100g: 47,
+        proteinPer100g: 0.9,
+        lipidPer100g: 0.1,
+        glucidPer100g: 11.7,
+        calciumMg: 40,
+        ironMg: 0.2,
+        supplierName: 'HTX Nông Sản Hàm Thuận',
+        notes: 'Vắt lấy nước cam nguyên chất, lọc sạch tép hạt',
+      });
+      ingredients.push({
+        id: 'ing-2',
+        name: 'Đường kính trắng Biên Hòa',
+        category: 'Gia vị & dầu mỡ',
+        type: 'kho',
+        unit: 'kg',
+        rawGramsPerPortion: 8,
+        cleanGramsPerPortion: 8,
+        wasteRatePercent: 0,
+        pricePerKg: 26000,
+        caloriesPer100g: 397,
+        proteinPer100g: 0,
+        lipidPer100g: 0,
+        glucidPer100g: 99.5,
+        calciumMg: 1,
+        ironMg: 0.1,
+        supplierName: 'Đại lý Bách Hóa Tuấn Mai',
+        notes: 'Khuấy đều tan đường, vị chua ngọt vừa uống',
+      });
+    } else if (normalized.includes('sữa')) {
+      ingredients.push({
+        id: 'ing-1',
+        name: 'Sữa tươi tiệt trùng có đường Vinamilk / TH True Milk',
+        category: 'Sữa & chế phẩm',
+        type: 'kho',
+        unit: 'hộp',
+        rawGramsPerPortion: 180,
+        cleanGramsPerPortion: 180,
+        wasteRatePercent: 0,
+        pricePerKg: 38000,
+        caloriesPer100g: 74,
+        proteinPer100g: 3.0,
+        lipidPer100g: 3.3,
+        glucidPer100g: 8.0,
+        calciumMg: 110,
+        ironMg: 0.1,
+        supplierName: 'Nhà phân phối Sữa Vinamilk / TH',
+        notes: 'Bảo quản mát, cho trẻ uống bữa phụ sáng/xế',
+      });
+    } else {
+      // Đồ uống giải khát khác (sắn dây, nước ép)
+      ingredients.push({
+        id: 'ing-1',
+        name: 'Bột sắn dây nguyên chất / Nước quả tươi',
+        category: 'Gạo & ngũ cốc',
+        type: 'kho',
+        unit: 'kg',
+        rawGramsPerPortion: 15,
+        cleanGramsPerPortion: 15,
+        wasteRatePercent: 0,
+        pricePerKg: 140000,
+        caloriesPer100g: 340,
+        proteinPer100g: 0.7,
+        lipidPer100g: 0.2,
+        glucidPer100g: 84.3,
+        calciumMg: 18,
+        ironMg: 1.5,
+        supplierName: 'Cơ sở Bột Sắn Dây Gia Truyền',
+        notes: 'Nấu chín trong sánh mịn, thanh nhiệt cho trẻ',
+      });
+      ingredients.push({
+        id: 'ing-2',
+        name: 'Đường phèn / Đường cát trắng',
+        category: 'Gia vị & dầu mỡ',
+        type: 'kho',
+        unit: 'kg',
+        rawGramsPerPortion: 8,
+        cleanGramsPerPortion: 8,
+        wasteRatePercent: 0,
+        pricePerKg: 26000,
+        caloriesPer100g: 397,
+        proteinPer100g: 0,
+        lipidPer100g: 0,
+        glucidPer100g: 99.5,
+        calciumMg: 1,
+        ironMg: 0.1,
+        supplierName: 'Đại lý Bách Hóa',
+        notes: 'Tạo vị ngọt nhẹ vừa miệng',
+      });
+    }
+
+    const nut = calculateDishNutrition(ingredients);
+    return {
+      id: `breakdown-${Date.now()}`,
+      dishName: dishName || 'Đồ uống mầm non',
+      mealSlot: (mealSlot as any) || 'snackMorning',
+      category: 'Đồ uống & Nước ép',
+      ageGroup: ageGroup || 'Mẫu giáo (3-6 tuổi)',
+      ingredients,
+      totalCalories: nut.totalCalories || 50,
+      totalProteinGrams: nut.totalProteinGrams || 0.2,
+      totalLipidGrams: nut.totalLipidGrams || 0,
+      totalGlucidGrams: nut.totalGlucidGrams || 12.0,
+      estimatedCostPerPortion: nut.estimatedCostPerPortion || 3200,
+      cookingInstructions: 'Rửa sạch dụng cụ vắt/pha. Sử dụng nước sôi để nguội tiệt trùng, nêm lượng đường vừa phải tạo vị chua ngọt tự nhiên, không dùng đá lạnh gây viêm họng trẻ.',
+    };
+  }
+
+  // ==========================================
+  // 2. NHÓM TRÁNG MIỆNG (Hoa quả, chè, sữa chua)
+  // ==========================================
+  if (
+    normalized.includes('chuối') ||
+    normalized.includes('dưa hấu') ||
+    normalized.includes('đu đủ') ||
+    normalized.includes('xoài') ||
+    normalized.includes('thanh long') ||
+    normalized.includes('táo') ||
+    normalized.includes('lê') ||
+    normalized.includes('chè') ||
+    normalized.includes('sữa chua') ||
+    normalized.includes('bánh flan')
+  ) {
+    if (normalized.includes('chuối')) {
+      ingredients.push({
+        id: 'ing-1',
+        name: 'Chuối tiêu chín tự nhiên',
+        category: 'Trái cây tráng miệng',
+        type: 'tuoi_song',
+        unit: 'kg',
+        rawGramsPerPortion: 65,
+        cleanGramsPerPortion: 45,
+        wasteRatePercent: 30,
+        pricePerKg: 18000,
+        caloriesPer100g: 89,
+        proteinPer100g: 1.1,
+        lipidPer100g: 0.3,
+        glucidPer100g: 22.8,
+        calciumMg: 5,
+        ironMg: 0.3,
+        supplierName: 'Vựa Trái Cây Sạch Tuy Phong',
+        notes: 'Chuối chín thơm lựng, vỏ mỏng, lột vỏ cắt khúc vừa ăn',
+      });
+    } else if (normalized.includes('dưa hấu')) {
+      ingredients.push({
+        id: 'ing-1',
+        name: 'Dưa hấu đỏ ngọt mát',
+        category: 'Trái cây tráng miệng',
+        type: 'tuoi_song',
+        unit: 'kg',
+        rawGramsPerPortion: 70,
+        cleanGramsPerPortion: 50,
+        wasteRatePercent: 28,
+        pricePerKg: 16000,
+        caloriesPer100g: 30,
+        proteinPer100g: 0.6,
+        lipidPer100g: 0.2,
+        glucidPer100g: 7.6,
+        calciumMg: 7,
+        ironMg: 0.2,
+        supplierName: 'HTX Nông Sản Hàm Thuận',
+        notes: 'Gọt vỏ xanh, bỏ sạch hạt, cắt quân cờ nhỏ mềm',
+      });
+    } else {
+      // Trái cây tráng miệng tổng hợp
+      ingredients.push({
+        id: 'ing-1',
+        name: 'Hoa quả tươi tráng miệng (đu đủ / thanh long / xoài)',
+        category: 'Trái cây tráng miệng',
+        type: 'tuoi_song',
+        unit: 'kg',
+        rawGramsPerPortion: 65,
+        cleanGramsPerPortion: 48,
+        wasteRatePercent: 26,
+        pricePerKg: 24000,
+        caloriesPer100g: 50,
+        proteinPer100g: 0.8,
+        lipidPer100g: 0.2,
+        glucidPer100g: 12.0,
+        calciumMg: 16,
+        ironMg: 0.4,
+        supplierName: 'Vựa Nông Sản Sạch',
+        notes: 'Rửa sạch, gọt vỏ bỏ hạt, cắt hạt lựu nhỏ mềm',
+      });
+    }
+
+    const nut = calculateDishNutrition(ingredients);
+    return {
+      id: `breakdown-${Date.now()}`,
+      dishName: dishName || 'Trái cây tráng miệng',
+      mealSlot: (mealSlot as any) || 'lunchDessert',
+      category: 'Tráng miệng',
+      ageGroup: ageGroup || 'Mẫu giáo (3-6 tuổi)',
+      ingredients,
+      totalCalories: nut.totalCalories || 40,
+      totalProteinGrams: nut.totalProteinGrams || 0.5,
+      totalLipidGrams: nut.totalLipidGrams || 0.1,
+      totalGlucidGrams: nut.totalGlucidGrams || 10.0,
+      estimatedCostPerPortion: nut.estimatedCostPerPortion || 2500,
+      cookingInstructions: 'Trái cây rửa qua nước muối loãng, gọt sạch vỏ, loại bỏ hạt cẩn thận tránh hóc dị vật, cắt miếng nhỏ vừa ăn cho trẻ.',
+    };
+  }
+
+  // ==========================================
+  // 3. NHÓM MÓN MẶN / CANH / SÁNG / CƠM
+  // ==========================================
   // Món có tôm / hải sản
   if (normalized.includes('tôm') || normalized.includes('hải sản') || normalized.includes('cá')) {
     ingredients.push({
@@ -1080,6 +1414,7 @@ function generateFallbackDishDecomposition(dishName: string, mealSlot: string, a
     id: `breakdown-${Date.now()}`,
     dishName: dishName || 'Món ăn dinh dưỡng mầm non',
     mealSlot: (mealSlot as any) || 'lunchMain',
+    category: 'Món mặn chính',
     ageGroup: ageGroup || 'Mẫu giáo (3-6 tuổi)',
     ingredients,
     totalCalories: nutrition.totalCalories,

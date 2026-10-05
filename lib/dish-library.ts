@@ -1,4 +1,4 @@
-import { DishItem } from '@/types/preschool';
+import { DishItem, DishCategory } from '@/types/preschool';
 
 /**
  * BỘ DỮ LIỆU GỐC CHUẨN CƠ SỞ (SEED BACKUP DATA - 30 MÓN CHỐT)
@@ -314,6 +314,16 @@ export const MASTER_SEED_BACKUP_DISHES: DishItem[] = [
     caloriesEstimate: 0,
     description: 'Nước tinh khiết đun sôi để nguội / nước khoáng đóng bình kiểm định an toàn vệ sinh.',
   },
+  {
+    id: 'dish-31',
+    name: 'Nước Chanh',
+    category: 'Đồ uống & Nước ép',
+    defaultMealSlot: 'snackMorning',
+    suitableAge: 'Tất cả lứa tuổi',
+    nutritionTags: ['Vitamin C tự nhiên', 'Thanh nhiệt giải khát', 'Tăng đề kháng'],
+    caloriesEstimate: 50,
+    description: 'Nước cốt chanh tươi vắt nguyên chất hòa nước đường kính trắng thanh mát, giàu vitamin C cho trẻ ngày hè.',
+  },
 ];
 
 export const INITIAL_DISH_LIBRARY: DishItem[] = MASTER_SEED_BACKUP_DISHES;
@@ -329,7 +339,75 @@ export function getStoredDishLibrary(): DishItem[] {
       return MASTER_SEED_BACKUP_DISHES;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : MASTER_SEED_BACKUP_DISHES;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Auto-correct any legacy dishes that were mistakenly saved as savory
+      const sanitized = parsed.map((d: DishItem) => {
+        const lower = (d.name || '').toLowerCase();
+        if (
+          (lower.includes('chanh') || lower.includes('nước cam') || lower.includes('nước mía') || lower.includes('nước sâm')) &&
+          (d.category === 'Món mặn chính' || !d.ingredients || d.ingredients.some((ing: any) => ing.name?.toLowerCase().includes('thịt') || ing.name?.toLowerCase().includes('lợn') || ing.name?.toLowerCase().includes('đông cô')))
+        ) {
+          return {
+            ...d,
+            category: 'Đồ uống & Nước ép' as DishCategory,
+            defaultMealSlot: 'snackMorning' as any,
+            ingredients: [
+              {
+                id: 'ing-lemon-1',
+                name: 'Chanh tươi mọng nước (vắt lấy nước cốt)',
+                category: 'Trái cây tráng miệng' as any,
+                type: 'tuoi_song' as any,
+                unit: 'kg',
+                rawGramsPerPortion: 25,
+                cleanGramsPerPortion: 20,
+                wasteRatePercent: 20,
+                pricePerKg: 32000,
+                caloriesPer100g: 29,
+                proteinPer100g: 1.1,
+                lipidPer100g: 0.3,
+                glucidPer100g: 9.3,
+                supplierName: 'Vựa Trái Cây Sạch Tuy Phong',
+              },
+              {
+                id: 'ing-lemon-2',
+                name: 'Đường kính trắng Biên Hòa',
+                category: 'Gia vị & dầu mỡ' as any,
+                type: 'kho' as any,
+                unit: 'kg',
+                rawGramsPerPortion: 10,
+                cleanGramsPerPortion: 10,
+                wasteRatePercent: 0,
+                pricePerKg: 26000,
+                caloriesPer100g: 397,
+                proteinPer100g: 0,
+                lipidPer100g: 0,
+                glucidPer100g: 99.5,
+                supplierName: 'Đại lý Bách Hóa Tuấn Mai',
+              },
+              {
+                id: 'ing-lemon-3',
+                name: 'Nước lọc đun sôi để nguội tiệt trùng',
+                category: 'Khác' as any,
+                type: 'kho' as any,
+                unit: 'lít',
+                rawGramsPerPortion: 120,
+                cleanGramsPerPortion: 120,
+                wasteRatePercent: 0,
+                pricePerKg: 2000,
+                caloriesPer100g: 0,
+                proteinPer100g: 0,
+                lipidPer100g: 0,
+                glucidPer100g: 0,
+                supplierName: 'Nguồn nước kiểm định ATTP của trường',
+              },
+            ],
+          };
+        }
+        return d;
+      });
+      return sanitized;
+    }
+    return MASTER_SEED_BACKUP_DISHES;
   } catch {
     return MASTER_SEED_BACKUP_DISHES;
   }
@@ -339,6 +417,14 @@ export function saveDishLibrary(items: DishItem[]): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(DISH_STORAGE_KEY, JSON.stringify(items));
+    // Asynchronously sync to central server in background
+    fetch('/api/dishes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sync_batch', dishes: items }),
+    }).catch(() => {
+      // offline fallback
+    });
   } catch {
     // ignore
   }
@@ -355,7 +441,101 @@ export function removeDishFromLibrary(dishId: string): DishItem[] {
   const current = getStoredDishLibrary();
   const updated = current.filter((d) => d.id !== dishId);
   saveDishLibrary(updated);
+  // Also notify server
+  if (typeof window !== 'undefined') {
+    fetch(`/api/dishes?id=${encodeURIComponent(dishId)}`, { method: 'DELETE' }).catch(() => {});
+  }
   return updated;
+}
+
+/**
+ * Tải kho món ăn từ máy chủ trung tâm (Hỗ trợ đa thiết bị / máy tính khác nhau)
+ */
+export async function fetchCloudDishLibrary(): Promise<DishItem[]> {
+  try {
+    const res = await fetch('/api/dishes');
+    if (!res.ok) throw new Error('Failed to fetch from server');
+    const json = await res.json();
+    if (json.success && Array.isArray(json.dishes) && json.dishes.length > 0) {
+      const local = getStoredDishLibrary();
+      // Merge unique by ID or Name
+      const map = new Map<string, DishItem>();
+      // Cho local vào trước
+      local.forEach((d) => map.set(d.id, d));
+      // Ghi đè hoặc thêm từ server
+      json.dishes.forEach((d: DishItem) => map.set(d.id, d));
+      const merged = Array.from(map.values());
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(DISH_STORAGE_KEY, JSON.stringify(merged));
+      }
+      return merged;
+    }
+  } catch (e) {
+    console.warn('Cannot fetch dishes from cloud, using local storage:', e);
+  }
+  return getStoredDishLibrary();
+}
+
+/**
+ * Đồng bộ toàn bộ kho món ăn lên máy chủ
+ */
+export async function syncAllDishesToCloud(items?: DishItem[]): Promise<boolean> {
+  const toSync = items || getStoredDishLibrary();
+  try {
+    const res = await fetch('/api/dishes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sync_batch', dishes: toSync }),
+    });
+    const json = await res.json();
+    return json.success === true;
+  } catch (e) {
+    console.error('syncAllDishesToCloud error:', e);
+    return false;
+  }
+}
+
+/**
+ * Xuất kho món ăn ra file JSON sao lưu (Đa thiết bị không cần mạng)
+ */
+export function exportDishLibraryToJson(items?: DishItem[]): void {
+  if (typeof window === 'undefined') return;
+  const data = items || getStoredDishLibrary();
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `kho_mon_an_mam_non_${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Nhập kho món ăn từ file JSON
+ */
+export async function importDishLibraryFromJson(jsonString: string): Promise<DishItem[]> {
+  try {
+    const parsed = JSON.parse(jsonString);
+    if (!Array.isArray(parsed)) throw new Error('File JSON không hợp lệ.');
+    const current = getStoredDishLibrary();
+    const map = new Map<string, DishItem>();
+    current.forEach((d) => map.set(d.id, d));
+    parsed.forEach((d: any) => {
+      if (d.name && d.category) {
+        const id = d.id || `dish-imported-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+        map.set(id, { ...d, id });
+      }
+    });
+    const merged = Array.from(map.values());
+    saveDishLibrary(merged);
+    await syncAllDishesToCloud(merged);
+    return merged;
+  } catch (err: any) {
+    throw new Error('Không thể đọc file: ' + err.message);
+  }
 }
 
 /**
@@ -365,6 +545,11 @@ export function resetDishLibraryToDefault(): DishItem[] {
   if (typeof window === 'undefined') return MASTER_SEED_BACKUP_DISHES;
   try {
     localStorage.setItem(DISH_STORAGE_KEY, JSON.stringify(MASTER_SEED_BACKUP_DISHES));
+    fetch('/api/dishes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reset_default' }),
+    }).catch(() => {});
   } catch {
     // ignore
   }

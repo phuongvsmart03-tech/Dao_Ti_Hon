@@ -1,5 +1,5 @@
 import type { Client } from '@libsql/client';
-import { MenuItem, DishRecipeBreakdown } from '@/types/preschool';
+import { MenuItem, DishRecipeBreakdown, DishItem } from '@/types/preschool';
 
 export interface MenuQueryParams {
   weekNumber?: number;
@@ -158,5 +158,83 @@ export class MenuService {
         return null;
       }
     }).filter(Boolean) as DishRecipeBreakdown[];
+  }
+
+  /**
+   * DISH LIBRARY - BATCH UPSERT & QUERY
+   */
+  static async upsertDishLibraryBatch(db: Client, dishes: DishItem[]): Promise<{ count: number }> {
+    if (!dishes || dishes.length === 0) return { count: 0 };
+    const now = Date.now();
+
+    const statements = dishes.map((d) => ({
+      sql: `INSERT INTO dish_library (
+        id, name, category, default_meal_slot, suitable_age, nutrition_tags,
+        calories_estimate, description, is_favorite, ingredients_json, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        category = excluded.category,
+        default_meal_slot = excluded.default_meal_slot,
+        suitable_age = excluded.suitable_age,
+        nutrition_tags = excluded.nutrition_tags,
+        calories_estimate = excluded.calories_estimate,
+        description = excluded.description,
+        is_favorite = excluded.is_favorite,
+        ingredients_json = excluded.ingredients_json,
+        updated_at = excluded.updated_at
+      WHERE excluded.updated_at >= dish_library.updated_at`,
+      args: [
+        d.id,
+        d.name,
+        d.category,
+        d.defaultMealSlot,
+        d.suitableAge || 'Tất cả lứa tuổi',
+        JSON.stringify(d.nutritionTags || []),
+        d.caloriesEstimate || 150,
+        d.description || '',
+        d.isFavorite ? 1 : 0,
+        d.ingredients ? JSON.stringify(d.ingredients) : null,
+        (d as any).updated_at || now,
+      ],
+    }));
+
+    await db.batch(statements, 'write');
+    return { count: dishes.length };
+  }
+
+  static async getDishLibrary(db: Client): Promise<DishItem[]> {
+    const res = await db.execute(`SELECT * FROM dish_library ORDER BY name ASC`);
+    return res.rows.map((row: any) => {
+      let tags: string[] = [];
+      try {
+        tags = JSON.parse(row.nutrition_tags as string);
+      } catch {
+        tags = ['Dinh dưỡng'];
+      }
+
+      let ingredients: any = undefined;
+      if (row.ingredients_json) {
+        try {
+          ingredients = JSON.parse(row.ingredients_json as string);
+        } catch {
+          // ignore
+        }
+      }
+
+      return {
+        id: row.id,
+        name: row.name,
+        category: row.category,
+        defaultMealSlot: row.default_meal_slot,
+        suitableAge: row.suitable_age || 'Tất cả lứa tuổi',
+        nutritionTags: tags,
+        caloriesEstimate: Number(row.calories_estimate) || 150,
+        description: row.description || '',
+        isFavorite: row.is_favorite === 1,
+        ingredients,
+        updated_at: row.updated_at,
+      } as DishItem;
+    });
   }
 }

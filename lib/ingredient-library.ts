@@ -243,7 +243,137 @@ export const DEFAULT_INGREDIENT_MAP: Record<string, DishIngredient[]> = {
     },
   ],
 
-  // 4. Gia vị dùng chung hàng ngày
+  // 4. Đồ uống, nước ép & tráng miệng chuẩn mầm non
+  'Nước Chanh': [
+    {
+      name: 'Chanh tươi quả mọng nước',
+      type: 'tuoi_song',
+      unit: 'kg',
+      rawPerPortionGrams: 25,
+      cleanPerPortionGrams: 20,
+      pricePerKg: 32000,
+      supplierName: 'HTX Nông Sản An Toàn Ba Vì',
+      supplierAddress: 'Ba Vì, Hà Nội',
+      supplierPhone: '024 3388 9911',
+      delivererName: 'Vũ Đức Thịnh',
+    },
+    {
+      name: 'Đường kính trắng Biên Hòa',
+      type: 'kho',
+      unit: 'kg',
+      rawPerPortionGrams: 10,
+      cleanPerPortionGrams: 10,
+      pricePerKg: 26000,
+      supplierName: 'Đại lý Bách Hóa Tổng Hợp Tuấn Mai',
+      supplierAddress: 'Số 45 Chợ Hôm, Hà Nội',
+      supplierPhone: '0912 345 678',
+      delivererName: 'Phạm Minh Hải',
+    },
+    {
+      name: 'Nước lọc tiệt trùng',
+      type: 'kho',
+      unit: 'lít',
+      rawPerPortionGrams: 120,
+      cleanPerPortionGrams: 120,
+      pricePerKg: 2000,
+      supplierName: 'Hệ thống nước tinh khiết học đường',
+      supplierAddress: 'Bếp ăn mầm non',
+      supplierPhone: '024 3388 9911',
+      delivererName: 'Cấp dưỡng trường',
+    },
+  ],
+  'Nước chanh tươi': [
+    {
+      name: 'Chanh tươi quả mọng nước',
+      type: 'tuoi_song',
+      unit: 'kg',
+      rawPerPortionGrams: 25,
+      cleanPerPortionGrams: 20,
+      pricePerKg: 32000,
+      supplierName: 'HTX Nông Sản An Toàn Ba Vì',
+      supplierAddress: 'Ba Vì, Hà Nội',
+      supplierPhone: '024 3388 9911',
+      delivererName: 'Vũ Đức Thịnh',
+    },
+    {
+      name: 'Đường kính trắng Biên Hòa',
+      type: 'kho',
+      unit: 'kg',
+      rawPerPortionGrams: 10,
+      cleanPerPortionGrams: 10,
+      pricePerKg: 26000,
+      supplierName: 'Đại lý Bách Hóa Tổng Hợp Tuấn Mai',
+      supplierAddress: 'Số 45 Chợ Hôm, Hà Nội',
+      supplierPhone: '0912 345 678',
+      delivererName: 'Phạm Minh Hải',
+    },
+    {
+      name: 'Nước lọc tiệt trùng',
+      type: 'kho',
+      unit: 'lít',
+      rawPerPortionGrams: 120,
+      cleanPerPortionGrams: 120,
+      pricePerKg: 2000,
+      supplierName: 'Hệ thống nước tinh khiết học đường',
+      supplierAddress: 'Bếp ăn mầm non',
+      supplierPhone: '024 3388 9911',
+      delivererName: 'Cấp dưỡng trường',
+    },
+  ],
+  'Nước Cam': [
+    {
+      name: 'Cam sành Hàm Yên mọng nước',
+      type: 'tuoi_song',
+      unit: 'kg',
+      rawPerPortionGrams: 100,
+      cleanPerPortionGrams: 55,
+      pricePerKg: 32000,
+      supplierName: 'HTX Nông Sản An Toàn Ba Vì',
+      supplierAddress: 'Ba Vì, Hà Nội',
+      supplierPhone: '024 3388 9911',
+      delivererName: 'Vũ Đức Thịnh',
+    },
+    {
+      name: 'Đường kính trắng Biên Hòa',
+      type: 'kho',
+      unit: 'kg',
+      rawPerPortionGrams: 3,
+      cleanPerPortionGrams: 3,
+      pricePerKg: 26000,
+      supplierName: 'Đại lý Bách Hóa Tổng Hợp Tuấn Mai',
+      supplierAddress: 'Số 45 Chợ Hôm, Hà Nội',
+      supplierPhone: '0912 345 678',
+      delivererName: 'Phạm Minh Hải',
+    },
+  ],
+  'Sinh tố trái cây theo mùa': [
+    {
+      name: 'Trái cây tươi theo mùa (xoài, bơ, chuối)',
+      type: 'tuoi_song',
+      unit: 'kg',
+      rawPerPortionGrams: 80,
+      cleanPerPortionGrams: 64,
+      pricePerKg: 45000,
+      supplierName: 'HTX Nông Sản An Toàn Ba Vì',
+      supplierAddress: 'Ba Vì, Hà Nội',
+      supplierPhone: '024 3388 9911',
+      delivererName: 'Vũ Đức Thịnh',
+    },
+    {
+      name: 'Sữa tươi tiệt trùng TH True Milk',
+      type: 'kho',
+      unit: 'lít',
+      rawPerPortionGrams: 50,
+      cleanPerPortionGrams: 50,
+      pricePerKg: 38000,
+      supplierName: 'Đại lý Sữa Học Đường TH',
+      supplierAddress: 'Hà Nội',
+      supplierPhone: '1800 54 54 40',
+      delivererName: 'Lê Hoàng Sơn',
+    },
+  ],
+
+  // 5. Gia vị dùng chung hàng ngày
   'Gia vị bếp': [
     {
       name: 'Nước mắm cá cơm Chinsu',
@@ -293,13 +423,29 @@ export function getIngredientsForDish(dishName: string): DishIngredient[] {
     }
   }
 
+  const lower = trimmed.toLowerCase();
+
+  // Đồ uống & Tráng miệng tuyệt đối KHÔNG sinh ra thịt/cá/nấm
+  if (lower.includes('chanh')) {
+    return DEFAULT_INGREDIENT_MAP['Nước Chanh'];
+  }
+  if (lower.includes('cam') || lower.includes('nước cam')) {
+    return DEFAULT_INGREDIENT_MAP['Nước Cam'];
+  }
+  if (lower.includes('sinh tố') || lower.includes('nước ép')) {
+    return DEFAULT_INGREDIENT_MAP['Sinh tố trái cây theo mùa'];
+  }
+  if (lower.includes('nước') || lower.includes('uống') || lower.includes('sâm') || lower.includes('mía') || lower.includes('dừa')) {
+    return DEFAULT_INGREDIENT_MAP['Nước Chanh'];
+  }
+
   // Sinh tự động thực phẩm tươi sống dựa trên từ khóa trong tên món
-  const isSoup = trimmed.toLowerCase().includes('canh') || trimmed.toLowerCase().includes('súp');
-  const isPork = trimmed.toLowerCase().includes('thịt') || trimmed.toLowerCase().includes('heo') || trimmed.toLowerCase().includes('lợn');
-  const isBeef = trimmed.toLowerCase().includes('bò');
-  const isFish = trimmed.toLowerCase().includes('cá');
-  const isShrimp = trimmed.toLowerCase().includes('tôm');
-  const isChicken = trimmed.toLowerCase().includes('gà');
+  const isSoup = lower.includes('canh') || lower.includes('súp');
+  const isPork = lower.includes('thịt') || lower.includes('heo') || lower.includes('lợn');
+  const isBeef = lower.includes('bò');
+  const isFish = lower.includes('cá');
+  const isShrimp = lower.includes('tôm');
+  const isChicken = lower.includes('gà');
 
   let rawItem = 'Thịt lợn nạc sạch';
   let price = 135000;

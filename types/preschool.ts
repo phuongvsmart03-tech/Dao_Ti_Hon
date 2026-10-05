@@ -204,10 +204,19 @@ export interface FoodIngredient {
   notes?: string; // Ghi chú đặc thù
 }
 
+export type MealSlot =
+  | 'breakfast'
+  | 'snackMorning'
+  | 'lunchMain'
+  | 'lunchSoup'
+  | 'lunchStaple'
+  | 'lunchDessert'
+  | 'afternoonSnack';
+
 export interface DishRecipeBreakdown {
   id: string;
   dishName: string;
-  mealSlot: 'breakfast' | 'snackMorning' | 'lunchMain' | 'lunchSoup' | 'lunchStaple' | 'lunchDessert' | 'afternoonSnack';
+  mealSlot: MealSlot;
   category?: DishCategory;
   ageGroup?: string;
   ingredients: FoodIngredient[];
@@ -225,7 +234,7 @@ export interface DishItem {
   category: DishCategory;
   suitableAge?: string;
   nutritionTags: string[];
-  defaultMealSlot: 'lunchMain' | 'lunchSoup' | 'breakfast' | 'afternoonSnack' | 'lunchDessert' | 'snackMorning' | 'lunchStaple';
+  defaultMealSlot: MealSlot;
   caloriesEstimate?: number;
   description?: string;
   isFavorite?: boolean;

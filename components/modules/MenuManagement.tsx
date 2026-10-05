@@ -35,8 +35,10 @@ import {
   saveDishLibrary,
   resetDishLibraryToDefault,
   addDishToLibrary,
+  syncAllDishesToCloud,
   MASTER_SEED_BACKUP_DISHES,
 } from '@/lib/dish-library';
+import { classifyDish } from '@/lib/dish-classifier';
 import { getStandardizedIngredientsForDish } from '@/lib/dish-database';
 import { DishIngredient } from '@/types/lightning';
 
@@ -126,6 +128,11 @@ export default function MenuManagement({
       return;
     }
 
+    // Tiền phân loại theo chuẩn mầm non
+    const preClassified = classifyDish(name);
+    const categoryToSend = newDish.category || preClassified.category;
+    const slotToSend = newDish.defaultMealSlot || preClassified.defaultMealSlot;
+
     setIsAiAnalyzing(true);
     setAiAnalysisResult(null);
 
@@ -137,7 +144,8 @@ export default function MenuManagement({
           action: 'decompose_dish',
           payload: {
             dishName: name,
-            mealSlot: newDish.defaultMealSlot || 'lunchMain',
+            category: categoryToSend,
+            mealSlot: slotToSend,
             ageGroup: 'Mẫu giáo (3-6 tuổi)',
             studentCount: studentsCount || 80,
           },
@@ -150,51 +158,18 @@ export default function MenuManagement({
         if (data) {
           setAiAnalysisResult(data);
 
-          // Auto detect category
-          const lower = name.toLowerCase();
-          let detectedCategory: DishCategory = 'Món mặn chính';
-          let detectedSlot: any = 'lunchMain';
-
-          if (lower.includes('canh') || lower.includes('soup') || lower.includes('súp') || lower.includes('riêu')) {
-            detectedCategory = 'Món canh';
-            detectedSlot = 'lunchSoup';
-          } else if (lower.includes('chè') || lower.includes('chuối') || lower.includes('dưa') || lower.includes('xoài') || lower.includes('táo') || lower.includes('bưởi') || (lower.includes('cam') && !lower.includes('thịt') && !lower.includes('sốt')) || lower.includes('thạch') || lower.includes('yaourt')) {
-            detectedCategory = 'Tráng miệng';
-            detectedSlot = 'lunchDessert';
-          } else if (lower.includes('sữa') || lower.includes('nước ép') || lower.includes('sinh tố') || lower.includes('nước cam') || lower.includes('sâm') || lower.includes('mía') || lower.includes('dừa')) {
-            detectedCategory = 'Đồ uống & Nước ép';
-            detectedSlot = 'snackMorning';
-          } else if (lower.includes('cháo') || lower.includes('bún') || lower.includes('phở') || lower.includes('miến') || lower.includes('bánh flan') || lower.includes('bánh bao') || lower.includes('bánh giò') || lower.includes('hủ tiếu') || lower.includes('bánh canh') || lower.includes('bánh hỏi')) {
-            detectedCategory = 'Bữa sáng & Bữa xế';
-            detectedSlot = 'breakfast';
-          } else if (lower.includes('cơm') || lower.includes('xôi') || lower.includes('gạo')) {
-            detectedCategory = 'Món ăn kèm & Cơm';
-            detectedSlot = 'lunchStaple';
-          }
-
-          // Build tags
-          const tags: string[] = [];
-          if (lower.includes('cá') || lower.includes('tôm') || lower.includes('cua') || lower.includes('hải sản')) {
-            tags.push('Giàu đạm', 'Omega-3', 'Giàu canxi');
-          } else if (lower.includes('bò')) {
-            tags.push('Giàu sắt', 'Đạm cao', 'Bổ máu');
-          } else if (lower.includes('gà') || lower.includes('thịt')) {
-            tags.push('Giàu đạm', 'Dễ tiêu hóa');
-          } else if (lower.includes('rau') || lower.includes('bí') || lower.includes('củ')) {
-            tags.push('Giàu chất xơ', 'Vitamin A', 'Thanh mát');
-          } else {
-            tags.push('Dinh dưỡng mầm non', 'Dễ hấp thu');
-          }
-
-          const calo = data.totalCalories || Math.round((data.ingredients || []).reduce((acc: number, ing: any) => acc + (ing.caloriesPer100g || 100) * ((ing.rawGramsPerPortion || 30) / 100), 0)) || 150;
+          const finalCategory: DishCategory = data.category || categoryToSend || preClassified.category;
+          const finalSlot = data.mealSlot || slotToSend || preClassified.defaultMealSlot;
+          const calo = data.totalCalories || preClassified.caloriesEstimate || 120;
 
           setNewDish((prev) => ({
             ...prev,
-            category: detectedCategory,
-            defaultMealSlot: detectedSlot,
+            category: finalCategory,
+            defaultMealSlot: finalSlot,
             caloriesEstimate: calo > 0 ? calo : 150,
-            nutritionTags: tags,
-            description: data.cookingInstructions || `Món ăn giàu dinh dưỡng chuẩn mầm non, bóc tách gồm ${data.ingredients?.length || 2} nguyên liệu sạch.`,
+            nutritionTags: preClassified.nutritionTags,
+            description: data.cookingInstructions || preClassified.description,
+            ingredients: data.ingredients,
           }));
         }
       }
@@ -210,21 +185,28 @@ export default function MenuManagement({
     e.preventDefault();
     if (!newDish.name?.trim()) return;
 
+    const classified = classifyDish(newDish.name);
+
     const item: DishItem = {
       id: `dish-custom-${Date.now()}`,
       name: newDish.name.trim(),
-      category: newDish.category || 'Món mặn chính',
-      defaultMealSlot: newDish.defaultMealSlot || 'lunchMain',
+      category: (newDish.category as DishCategory) || classified.category || 'Món mặn chính',
+      defaultMealSlot: newDish.defaultMealSlot || classified.defaultMealSlot || 'lunchMain',
       suitableAge: newDish.suitableAge || 'Tất cả lứa tuổi',
-      nutritionTags: newDish.nutritionTags || ['Dinh dưỡng mầm non'],
-      caloriesEstimate: Number(newDish.caloriesEstimate) || 150,
-      description: newDish.description || '',
+      nutritionTags: newDish.nutritionTags && newDish.nutritionTags.length > 0 ? newDish.nutritionTags : classified.nutritionTags,
+      caloriesEstimate: Number(newDish.caloriesEstimate) || classified.caloriesEstimate || 120,
+      description: newDish.description || classified.description || '',
+      ingredients: aiAnalysisResult?.ingredients || newDish.ingredients,
     };
 
     const updated = addDishToLibrary(item);
     setDishLibrary(updated);
     setIsAddingNew(false);
     setAiAnalysisResult(null);
+
+    // Đồng bộ tức thì lên đám mây Turso Server
+    syncAllDishesToCloud(updated).catch(() => {});
+
     setNewDish({
       name: '',
       category: 'Món mặn chính',
@@ -268,6 +250,31 @@ export default function MenuManagement({
       setShowRestoreSuccess(true);
       setTimeout(() => setShowRestoreSuccess(false), 3000);
     }
+  };
+
+  // Helper: Trích xuất chính xác thành phần nguyên liệu của món (ưu tiên dữ liệu đã bóc tách từ AI/người dùng)
+  const resolveDishIngredients = (d: DishItem) => {
+    if (d.ingredients && d.ingredients.length > 0) {
+      return d.ingredients.map((ing) => ({
+        name: ing.name,
+        type: (ing.type || 'tuoi_song') as 'tuoi_song' | 'kho',
+        unit: ing.unit || 'kg',
+        role: (ing.category === 'Gia vị & dầu mỡ' ? 'Gia vị' : 'NL chính') as string,
+        rawPerPortionGrams: ing.rawGramsPerPortion || 30,
+        cleanPerPortionGrams: ing.cleanGramsPerPortion || 25,
+        wasteRate: ing.wasteRatePercent || 0,
+        pricePerKg: ing.pricePerKg || 35000,
+        protein: Math.round(((ing.proteinPer100g || 0) * (ing.rawGramsPerPortion || 30) / 100) * 10) / 10,
+        fat: Math.round(((ing.lipidPer100g || 0) * (ing.rawGramsPerPortion || 30) / 100) * 10) / 10,
+        carbs: Math.round(((ing.glucidPer100g || 0) * (ing.rawGramsPerPortion || 30) / 100) * 10) / 10,
+        calories: Math.round(((ing.caloriesPer100g || 50) * (ing.rawGramsPerPortion || 30) / 100) * 10) / 10,
+        supplierName: ing.supplierName || 'Vựa thực phẩm sạch',
+        producerName: '',
+        supplierAddress: '',
+        producerAddress: '',
+      }));
+    }
+    return getStandardizedIngredientsForDish(d.name, d.category);
   };
 
   return (
@@ -360,9 +367,25 @@ export default function MenuManagement({
                   <input
                     type="text"
                     required
-                    placeholder="VD: Cá hồi sốt cam, Canh bí đao thịt bằm, Chè bắp lá dứa..."
+                    placeholder="VD: Nước Chanh, Cá basa kho thơm, Canh bí đỏ thịt bằm..."
                     value={newDish.name}
-                    onChange={(e) => setNewDish({ ...newDish, name: e.target.value })}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      if (!name.trim()) {
+                        setNewDish((prev) => ({ ...prev, name }));
+                        return;
+                      }
+                      const classified = classifyDish(name);
+                      setNewDish((prev) => ({
+                        ...prev,
+                        name,
+                        category: classified.category,
+                        defaultMealSlot: classified.defaultMealSlot,
+                        caloriesEstimate: classified.caloriesEstimate,
+                        nutritionTags: classified.nutritionTags,
+                        description: classified.description,
+                      }));
+                    }}
                     className="flex-1 px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 bg-white font-semibold text-slate-900"
                   />
                   <button
@@ -385,6 +408,14 @@ export default function MenuManagement({
                     )}
                   </button>
                 </div>
+                {newDish.name && newDish.name.trim().length > 1 && (
+                  <div className="mt-1.5 flex items-center gap-2 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>
+                      AI nhận diện: <strong>{newDish.category}</strong> • Định mức ~<strong>{newDish.caloriesEstimate || 50}</strong> Kcal
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="md:col-span-3">
@@ -609,7 +640,7 @@ export default function MenuManagement({
       {/* 4. Grid Món Ăn Trong Kho */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredDishes.map((dish) => {
-          const ingredients = getStandardizedIngredientsForDish(dish.name);
+          const ingredients = resolveDishIngredients(dish);
           const isCoreDish = MASTER_SEED_BACKUP_DISHES.some((m) => m.name === dish.name);
 
           // Get category badge color
@@ -792,7 +823,7 @@ export default function MenuManagement({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {getStandardizedIngredientsForDish(selectedDishForBOM.name).map((ing, idx) => (
+                    {resolveDishIngredients(selectedDishForBOM).map((ing, idx) => (
                       <tr key={idx} className="hover:bg-blue-50/40">
                         <td className="p-2.5 text-center border-r border-slate-200 font-mono text-slate-500">
                           {idx + 1}
