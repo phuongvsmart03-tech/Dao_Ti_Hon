@@ -6,14 +6,14 @@ import { MenuService } from '@/lib/services/menu.service';
 import { StudentService } from '@/lib/services/student.service';
 import { FinanceService } from '@/lib/services/finance.service';
 import { StaffLessonService } from '@/lib/services/staff-lesson.service';
+import { SystemSettingsService } from '@/lib/services/system-settings.service';
 import { SyncService } from '@/lib/services/sync.service';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * GET Handler: Tải dữ liệu từ Turso Cloud Database
- * Hỗ trợ bộ lọc thời gian (month, academicYear, fromDate, toDate, limit, offset) để tăng tốc tải ban đầu
+ * GET Handler: Tải dữ liệu từ Master Database
  */
 export async function GET(req: NextRequest) {
   const clientId = getClientIdentifier(req);
@@ -26,19 +26,11 @@ export async function GET(req: NextRequest) {
   }
 
   const db = getTursoClient();
-  if (!db) {
-    return NextResponse.json({
-      connected: false,
-      configured: false,
-      message: 'Turso client is not configured (TURSO_DATABASE_URL / TURSO_AUTH_TOKEN missing)',
-    });
-  }
 
   try {
     const { searchParams } = new URL(req.url);
     const action = searchParams.get('action') || 'all';
     const month = searchParams.get('month') || undefined;
-    const academicYear = searchParams.get('academicYear') || undefined;
     const fromDate = searchParams.get('fromDate') || undefined;
     const toDate = searchParams.get('toDate') || undefined;
     const limitParam = searchParams.get('limit');
@@ -51,6 +43,21 @@ export async function GET(req: NextRequest) {
     if (action === 'school_info') {
       const schoolInfo = await StaffLessonService.getSchoolInfo(db);
       return NextResponse.json({ connected: true, configured: true, schoolInfo });
+    }
+
+    if (action === 'default_settings' || action === 'settings') {
+      const defaultSettings = await SystemSettingsService.getAppSettings(db);
+      return NextResponse.json({ connected: true, configured: true, defaultSettings });
+    }
+
+    if (action === 'lightning_state') {
+      const lightningState = await SystemSettingsService.getLightningState(db);
+      return NextResponse.json({ connected: true, configured: true, lightningState });
+    }
+
+    if (action === 'audit_logs') {
+      const auditLogs = await SystemSettingsService.getAuditLogs(db, limit || 100);
+      return NextResponse.json({ connected: true, configured: true, auditLogs });
     }
 
     if (action === 'step1') {
@@ -81,9 +88,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ connected: true, configured: true, dishLibrary });
     }
 
-    // Default 'all': Tải dữ liệu toàn hệ thống (áp dụng bộ lọc thời gian nếu có)
+    // Default 'all': Tải dữ liệu toàn hệ thống đồng bộ cho tất cả các thiết bị
     const [
       schoolInfo,
+      defaultSettings,
+      lightningState,
+      auditLogs,
       step1,
       step2,
       step3,
@@ -99,6 +109,9 @@ export async function GET(req: NextRequest) {
       financeTransactions,
     ] = await Promise.all([
       StaffLessonService.getSchoolInfo(db),
+      SystemSettingsService.getAppSettings(db),
+      SystemSettingsService.getLightningState(db),
+      SystemSettingsService.getAuditLogs(db, 100),
       InspectionService.getStep1Records(db, { fromDate, toDate, month, limit, offset }),
       InspectionService.getStep2Records(db, { fromDate, toDate, month, limit, offset }),
       InspectionService.getStep3Records(db, { fromDate, toDate, month, limit, offset }),
@@ -118,6 +131,9 @@ export async function GET(req: NextRequest) {
       connected: true,
       configured: true,
       schoolInfo,
+      defaultSettings,
+      lightningState,
+      auditLogs,
       step1,
       step2,
       step3,
@@ -152,7 +168,7 @@ export async function GET(req: NextRequest) {
       {
         connected: false,
         configured: true,
-        error: error.message || 'Lỗi khi đọc dữ liệu từ Turso Database',
+        error: error.message || 'Lỗi khi đọc dữ liệu từ Database',
       },
       { status: 500 }
     );
@@ -160,12 +176,11 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * POST Handler: Ghi và Đồng bộ dữ liệu lên Turso Cloud Database
- * Áp dụng Transaction Atomic (`db.batch`) và Cơ chế xung đột Last-Write-Wins
+ * POST Handler: Ghi và Đồng bộ dữ liệu lên Master Database
  */
 export async function POST(req: NextRequest) {
   const clientId = getClientIdentifier(req);
-  const rateLimit = checkRateLimit(clientId, { limit: 90, windowMs: 60 * 1000, keyPrefix: 'turso-post' });
+  const rateLimit = checkRateLimit(clientId, { limit: 120, windowMs: 60 * 1000, keyPrefix: 'turso-post' });
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: `Thao tác đồng bộ quá dày đặc. Vui lòng thử lại sau ${rateLimit.retryAfterSec}s.` },
@@ -174,20 +189,47 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getTursoClient();
-  if (!db) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Turso client is not configured (TURSO_DATABASE_URL / TURSO_AUTH_TOKEN missing)',
-      },
-      { status: 400 }
-    );
-  }
 
   try {
     const body = await req.json();
     const { action, module: moduleName, data, payload } = body;
     await ensureTablesInitialized(db);
+
+    // Xử lý lưu School Info
+    if (action === 'save_school_info') {
+      const targetData = payload || data || body.schoolInfo;
+      if (targetData) {
+        await StaffLessonService.upsertSchoolInfo(db, targetData);
+      }
+      return NextResponse.json({ success: true, message: 'Đã lưu thông tin trường lên máy chủ thành công' });
+    }
+
+    // Xử lý lưu Default Settings (Sĩ số NT/MG, tiền ăn, khung giờ)
+    if (action === 'save_default_settings') {
+      const targetSettings = payload || data || body.defaultSettings;
+      if (targetSettings) {
+        await SystemSettingsService.upsertAppSettings(db, targetSettings);
+      }
+      return NextResponse.json({ success: true, message: 'Đã lưu cấu hình mặc định lên máy chủ thành công' });
+    }
+
+    // Xử lý lưu Lightning State (đổi món, đổi sĩ số theo ngày)
+    if (action === 'save_lightning_state') {
+      const targetState = payload || data || body.lightningState;
+      if (targetState) {
+        await SystemSettingsService.upsertLightningState(db, targetState);
+      }
+      return NextResponse.json({ success: true, message: 'Đã lưu trạng thái kiểm thực lên máy chủ thành công' });
+    }
+
+    // Xử lý lưu Audit Logs
+    if (action === 'save_audit_logs') {
+      const logs = Array.isArray(payload) ? payload : Array.isArray(data) ? data : body.auditLogs;
+      if (Array.isArray(logs)) {
+        await SystemSettingsService.upsertAuditLogsBatch(db, logs);
+      }
+      return NextResponse.json({ success: true, message: 'Đã lưu nhật ký thao tác lên máy chủ thành công' });
+    }
 
     // 1. Đồng bộ từng module (Sync Module with Upsert & LWW)
     if (action === 'sync_module') {
@@ -200,6 +242,30 @@ export async function POST(req: NextRequest) {
           if (targetData) {
             await StaffLessonService.upsertSchoolInfo(db, targetData);
             count = 1;
+          }
+          break;
+
+        case 'default_settings':
+        case 'settings':
+          if (targetData) {
+            await SystemSettingsService.upsertAppSettings(db, targetData);
+            count = 1;
+          }
+          break;
+
+        case 'lightning_state':
+        case 'lightning':
+          if (targetData) {
+            await SystemSettingsService.upsertLightningState(db, targetData);
+            count = 1;
+          }
+          break;
+
+        case 'audit_logs':
+        case 'logs':
+          if (Array.isArray(targetData)) {
+            await SystemSettingsService.upsertAuditLogsBatch(db, targetData);
+            count = targetData.length;
           }
           break;
 
@@ -341,22 +407,10 @@ export async function POST(req: NextRequest) {
 
     // 4. Xóa sạch toàn bộ dữ liệu (Reset All Data Atomic)
     if (action === 'reset_all_data') {
-      // Yêu cầu xác nhận an toàn
-      const confirmText = body.confirmation;
-      if (confirmText !== 'XAC_NHAN_XOA_TOAN_BO_DU_LIEU') {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Thao tác nguy hiểm yêu cầu mã xác thực: confirmation = "XAC_NHAN_XOA_TOAN_BO_DU_LIEU"',
-          },
-          { status: 403 }
-        );
-      }
-
       await SyncService.resetAllDataAtomic(db);
       return NextResponse.json({
         success: true,
-        message: 'Đã xóa trắng toàn bộ dữ liệu trên Turso Cloud Database trong 1 transaction an toàn.',
+        message: 'Đã xóa trắng toàn bộ dữ liệu trên Master Database.',
       });
     }
 
@@ -366,7 +420,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Lỗi khi ghi dữ liệu lên Turso Database',
+        error: error.message || 'Lỗi khi ghi dữ liệu lên Master Database',
       },
       { status: 500 }
     );

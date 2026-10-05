@@ -189,13 +189,11 @@ export default function MealFieldSelect({
 
   const handleDeleteDish = (dishId: string, dishName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`Bạn có chắc muốn xóa món "${dishName}" khỏi thư viện?`)) {
-      const updated = removeDishFromLibrary(dishId);
-      setAllDishes(updated);
-      if (currentDishesInField.some((n) => n.toLowerCase() === dishName.toLowerCase())) {
-        const remaining = currentDishesInField.filter((n) => n.toLowerCase() !== dishName.toLowerCase());
-        onChange(remaining.join(' - '));
-      }
+    const updated = removeDishFromLibrary(dishId);
+    setAllDishes(updated);
+    if (currentDishesInField.some((n) => n.toLowerCase() === dishName.toLowerCase())) {
+      const remaining = currentDishesInField.filter((n) => n.toLowerCase() !== dishName.toLowerCase());
+      onChange(remaining.join(' - '));
     }
   };
 

@@ -67,6 +67,8 @@ export default function MenuManagement({
   const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null);
   const [editingDish, setEditingDish] = useState<DishItem | null>(null);
   const [selectedDishForBOM, setSelectedDishForBOM] = useState<DishItem | null>(null);
+  const [deletingDish, setDeletingDish] = useState<DishItem | null>(null);
+  const [confirmRestoreModal, setConfirmRestoreModal] = useState(false);
   const [showRestoreSuccess, setShowRestoreSuccess] = useState(false);
 
   // New Dish State
@@ -230,26 +232,29 @@ export default function MenuManagement({
   };
 
   // Xóa món ăn khỏi kho
-  const handleDeleteDish = (id: string, name: string) => {
-    if (confirm(`Bạn có chắc chắn muốn xóa món "${name}" khỏi kho món ăn của trường?`)) {
-      const updated = dishLibrary.filter((d) => d.id !== id);
-      setDishLibrary(updated);
-      saveDishLibrary(updated);
-    }
+  const handleDeleteDish = (dish: DishItem) => {
+    setDeletingDish(dish);
+  };
+
+  const handleConfirmDeleteDish = () => {
+    if (!deletingDish) return;
+    const updated = dishLibrary.filter((d) => d.id !== deletingDish.id);
+    setDishLibrary(updated);
+    saveDishLibrary(updated);
+    setDeletingDish(null);
   };
 
   // Khôi phục 30 món gốc
   const handleRestoreDefaultDishes = () => {
-    if (
-      confirm(
-        'Bạn có chắc chắn muốn khôi phục kho món ăn về đúng BỘ 30 MÓN GỐC CHUẨN CƠ SỞ (Seed Backup)?\n\nDanh mục 30 món đã chốt sẽ được thiết lập lại nguyên bản.'
-      )
-    ) {
-      const restored = resetDishLibraryToDefault();
-      setDishLibrary(restored);
-      setShowRestoreSuccess(true);
-      setTimeout(() => setShowRestoreSuccess(false), 3000);
-    }
+    setConfirmRestoreModal(true);
+  };
+
+  const handleConfirmRestoreDefaultDishes = () => {
+    const restored = resetDishLibraryToDefault();
+    setDishLibrary(restored);
+    setConfirmRestoreModal(false);
+    setShowRestoreSuccess(true);
+    setTimeout(() => setShowRestoreSuccess(false), 3000);
   };
 
   // Helper: Trích xuất chính xác thành phần nguyên liệu của món (ưu tiên dữ liệu đã bóc tách từ AI/người dùng)
@@ -753,7 +758,7 @@ export default function MenuManagement({
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDeleteDish(dish.id, dish.name)}
+                    onClick={() => handleDeleteDish(dish)}
                     className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
                     title="Xóa món khỏi kho thư viện"
                   >
@@ -972,6 +977,97 @@ export default function MenuManagement({
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Modal Xác Nhận Xóa Món Ăn */}
+      {deletingDish && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 bg-rose-100 rounded-xl">
+                <Trash2 className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Xác Nhận Xóa Món Ăn</h3>
+                <p className="text-xs text-slate-500">Món này sẽ bị xóa khỏi kho thư viện món ăn của trường.</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Tên món:</span>
+                <strong className="text-slate-900 font-bold text-sm">{deletingDish.name}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Danh mục:</span>
+                <span className="font-semibold text-blue-900">{deletingDish.category}</span>
+              </div>
+              {deletingDish.caloriesEstimate && (
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Năng lượng ước tính:</span>
+                  <span className="font-mono text-amber-700 font-bold">{deletingDish.caloriesEstimate} Kcal</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDeletingDish(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteDish}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Xác Nhận Xóa</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Xác Nhận Khôi Phục 30 Món Gốc */}
+      {confirmRestoreModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-blue-200 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center gap-3 text-blue-700">
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <RotateCcw className="w-6 h-6 text-blue-700" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Khôi Phục 30 Món Ăn Gốc</h3>
+                <p className="text-xs text-slate-500">Thiết lập lại danh mục 30 món dinh dưỡng chuẩn cơ sở.</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Bạn có chắc muốn khôi phục kho món ăn về đúng <strong>Bộ 30 Món Dinh Dưỡng Gốc</strong> của cơ sở?
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setConfirmRestoreModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRestoreDefaultDishes}
+                className="px-4 py-2 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>Xác Nhận Khôi Phục</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

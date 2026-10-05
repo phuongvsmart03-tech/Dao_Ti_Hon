@@ -197,18 +197,64 @@ export default function LightningModule({
     setDefaultStep3Time(s3T);
     setDefaultSampleTime(smT);
     setIsDefaultModalOpen(false);
-    setDefaultToast('Đã lưu cấu hình mặc định (Sĩ số bé ăn, Tiền ăn, Giờ kiểm thực) thành công!');
+
+    // Đồng bộ ngay lập tức lên Máy Chủ Đồng Bộ để tất cả các thiết bị khác nhận cùng 1 cấu hình
+    fetch('/api/turso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save_default_settings',
+        defaultSettings: {
+          nurseryCount: nCnt,
+          kindergartenCount: kCnt,
+          nurseryPrice: nPr,
+          kindergartenPrice: kPr,
+          step1Time: s1T,
+          step2Time: s2T,
+          step3Time: s3T,
+          sampleTime: smT,
+          includeSaturday,
+          includeSunday,
+        },
+      }),
+    }).catch(() => {});
+
+    setDefaultToast('Đã lưu cấu hình mặc định (Sĩ số bé ăn, Tiền ăn, Giờ kiểm thực) & Đồng bộ toàn hệ thống!');
     setTimeout(() => setDefaultToast(null), 3500);
   };
 
-  // Tự động lưu cấu hình mặc định (số bé, tiền ăn) vào localStorage
+  // Tự động lưu cấu hình mặc định (số bé, tiền ăn) vào localStorage & đồng bộ máy chủ
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
         saveDefaultSettings({ nurseryCount, kindergartenCount, nurseryPrice, kindergartenPrice });
       } catch {}
+
+      const timer = setTimeout(() => {
+        fetch('/api/turso', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'save_default_settings',
+            defaultSettings: {
+              nurseryCount,
+              kindergartenCount,
+              nurseryPrice,
+              kindergartenPrice,
+              step1Time: defaultStep1Time,
+              step2Time: defaultStep2Time,
+              step3Time: defaultStep3Time,
+              sampleTime: defaultSampleTime,
+              includeSaturday,
+              includeSunday,
+            },
+          }),
+        }).catch(() => {});
+      }, 1200);
+
+      return () => clearTimeout(timer);
     }
-  }, [nurseryCount, kindergartenCount, nurseryPrice, kindergartenPrice]);
+  }, [nurseryCount, kindergartenCount, nurseryPrice, kindergartenPrice, defaultStep1Time, defaultStep2Time, defaultStep3Time, defaultSampleTime, includeSaturday, includeSunday]);
 
   // Template lựa chọn in
   const [selectedTemplate, setSelectedTemplate] = useState<
@@ -255,27 +301,33 @@ export default function LightningModule({
     }
   });
 
-  // Tự động ghi nhớ các món đã chỉnh sửa vào localStorage
+  // Tự động ghi nhớ các món và sĩ số tùy chỉnh vào localStorage & máy chủ đồng bộ
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem('lightning_custom_dishes', JSON.stringify(customDishesByDate));
-      } catch (err) {
-        console.error('Lỗi khi lưu món tùy chỉnh:', err);
-      }
-    }
-  }, [customDishesByDate]);
-
-  // Tự động ghi nhớ sĩ số suất ăn tùy chỉnh vào localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
         localStorage.setItem('lightning_custom_counts', JSON.stringify(customCountsByDate));
       } catch (err) {
-        console.error('Lỗi khi lưu sĩ số tùy chỉnh:', err);
+        console.error('Lỗi khi lưu tùy chỉnh:', err);
       }
+
+      const timer = setTimeout(() => {
+        fetch('/api/turso', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'save_lightning_state',
+            lightningState: {
+              customDishes: customDishesByDate,
+              customCounts: customCountsByDate,
+            },
+          }),
+        }).catch(() => {});
+      }, 1500);
+
+      return () => clearTimeout(timer);
     }
-  }, [customCountsByDate]);
+  }, [customDishesByDate, customCountsByDate]);
 
   // Kho toàn bộ món ăn từ dish-library
   const [allDishes, setAllDishes] = useState<DishItem[]>(() => getStoredDishLibrary());

@@ -67,6 +67,8 @@ export default function DishLibraryModal({
   const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null);
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
+  const [deletingDish, setDeletingDish] = useState<{ id: string; name: string } | null>(null);
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto pull latest dishes from server on modal open (cross-device sync)
@@ -336,23 +338,33 @@ export default function DishLibraryModal({
   };
 
   const handleDeleteDish = (id: string, name: string) => {
-    if (confirm(`Bạn có chắc chắn muốn xóa món "${name}" khỏi thư viện thực đơn của trường?`)) {
-      const updated = dishLibrary.filter((d) => d.id !== id);
-      setDishLibrary(updated);
-      saveDishLibrary(updated);
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }
+    setDeletingDish({ id, name });
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingDish) return;
+    const { id } = deletingDish;
+    const updated = dishLibrary.filter((d) => d.id !== id);
+    setDishLibrary(updated);
+    saveDishLibrary(updated);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setDeletingDish(null);
+    showSyncNotice(`Đã xóa món "${deletingDish.name}" khỏi thư viện`, 'info');
   };
 
   const handleResetDefaults = () => {
-    if (confirm('Khôi phục toàn bộ danh sách 60+ món ăn chuẩn ban đầu của trường?')) {
-      const defs = resetDishLibraryToDefault();
-      setDishLibrary(defs);
-    }
+    setIsConfirmingReset(true);
+  };
+
+  const handleConfirmReset = () => {
+    const defs = resetDishLibraryToDefault();
+    setDishLibrary(defs);
+    setIsConfirmingReset(false);
+    showSyncNotice('Đã khôi phục toàn bộ danh mục 60+ món ăn chuẩn!', 'success');
   };
 
   if (!isOpen) return null;
@@ -984,6 +996,78 @@ export default function DishLibraryModal({
             </button>
           </div>
         </div>
+
+        {/* Modal Xác Nhận Xóa Món */}
+        {deletingDish && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-2xs animate-in fade-in duration-100">
+            <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-rose-200 space-y-3.5">
+              <div className="flex items-center gap-3 text-rose-600">
+                <div className="p-2.5 bg-rose-100 rounded-xl">
+                  <Trash2 className="w-5 h-5 text-rose-600" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Xóa Món Ăn</h4>
+                  <p className="text-xs text-slate-500">Xóa món khỏi thư viện thực đơn trường</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                Bạn có chắc chắn muốn xóa món <strong className="text-rose-700">{deletingDish.name}</strong> không?
+              </p>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setDeletingDish(null)}
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg cursor-pointer"
+                >
+                  Xác Nhận Xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Xác Nhận Khôi Phục Mặc Định */}
+        {isConfirmingReset && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-2xs animate-in fade-in duration-100">
+            <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-amber-200 space-y-3.5">
+              <div className="flex items-center gap-3 text-amber-600">
+                <div className="p-2.5 bg-amber-100 rounded-xl">
+                  <RotateCcw className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Khôi Phục Mặc Định</h4>
+                  <p className="text-xs text-slate-500">60+ món ăn dinh dưỡng tiêu chuẩn mầm non</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                Khôi phục toàn bộ danh sách 60+ món ăn chuẩn ban đầu của trường? Các món tự thêm sẽ được đưa về mặc định.
+              </p>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingReset(false)}
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmReset}
+                  className="px-3 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg cursor-pointer"
+                >
+                  Khôi Phục Ngay
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -24,6 +24,8 @@ import {
   setPinDisabled,
   getSchoolInfo,
   saveSchoolInfo,
+  getDefaultSettings,
+  saveDefaultSettings,
   moduleStorage,
   backupRestore,
   exportToCsv,
@@ -363,20 +365,114 @@ export default function MainPage() {
     showToast('Đã nạp mẫu lịch sử thao tác thành công!', 'success');
   };
 
-  // Check Turso connection on mount & auto-pull dishes across devices
-  useEffect(() => {
-    fetchCloudDishLibrary().catch(() => {});
-    fetch('/api/turso')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.connected) {
-          setIsTursoConnected(true);
-        }
-      })
-      .catch(() => {
-        setIsTursoConnected(false);
-      });
+  // Sync module to central database
+  const syncModuleToServer = useCallback((moduleId: string, items: any) => {
+    fetch('/api/turso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sync_module', moduleId, payload: items }),
+    }).catch((e) => console.error('Lỗi khi đồng bộ lên máy chủ:', e));
   }, []);
+
+  // Tải dữ liệu chính từ Master Database và tự động đồng bộ thời gian thực cho tất cả các máy
+  const loadMasterData = useCallback(async () => {
+    try {
+      fetchCloudDishLibrary().catch(() => {});
+      const res = await fetch('/api/turso');
+      const data = await res.json();
+      if (data.connected) {
+        setIsTursoConnected(true);
+
+        if (data.schoolInfo && Object.keys(data.schoolInfo).length > 0) {
+          setSchoolInfo(data.schoolInfo);
+          saveSchoolInfo(data.schoolInfo);
+        }
+        if (data.defaultSettings) {
+          saveDefaultSettings(data.defaultSettings);
+        }
+        if (data.lightningState) {
+          if (data.lightningState.customDishes) {
+            localStorage.setItem('lightning_custom_dishes', JSON.stringify(data.lightningState.customDishes));
+          }
+          if (data.lightningState.customCounts) {
+            localStorage.setItem('lightning_custom_counts', JSON.stringify(data.lightningState.customCounts));
+          }
+        }
+        if (Array.isArray(data.auditLogs) && data.auditLogs.length > 0) {
+          setAuditLogs(data.auditLogs);
+          localStorage.setItem('audit_logs_v1', JSON.stringify(data.auditLogs));
+        }
+        if (Array.isArray(data.step1)) {
+          setStep1Data(data.step1);
+          moduleStorage.saveStep1(data.step1);
+        }
+        if (Array.isArray(data.step2)) {
+          setStep2Data(data.step2);
+          moduleStorage.saveStep2(data.step2);
+        }
+        if (Array.isArray(data.step3)) {
+          setStep3Data(data.step3);
+          moduleStorage.saveStep3(data.step3);
+        }
+        if (Array.isArray(data.menuItems)) {
+          setMenuData(data.menuItems);
+          moduleStorage.saveMenu(data.menuItems);
+        }
+        if (Array.isArray(data.sampleDisposals)) {
+          setSamplesData(data.sampleDisposals);
+          moduleStorage.saveSamples(data.sampleDisposals);
+        }
+        if (Array.isArray(data.students)) {
+          setStudentsData(data.students);
+          moduleStorage.saveStudents(data.students);
+        }
+        if (Array.isArray(data.healthRecords)) {
+          setHealthData(data.healthRecords);
+          moduleStorage.saveHealth(data.healthRecords);
+        }
+        if (Array.isArray(data.staffMembers)) {
+          setStaffData(data.staffMembers);
+          moduleStorage.saveStaff(data.staffMembers);
+        }
+        if (Array.isArray(data.lessonPlans)) {
+          setLessonsData(data.lessonPlans);
+          moduleStorage.saveLessons(data.lessonPlans);
+        }
+        if (Array.isArray(data.teacherSalaries)) {
+          setSalariesData(data.teacherSalaries);
+          moduleStorage.saveSalaries(data.teacherSalaries);
+        }
+        if (Array.isArray(data.financeTransactions)) {
+          setTransactionsData(data.financeTransactions);
+          moduleStorage.saveTransactions(data.financeTransactions);
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải dữ liệu từ máy chủ:', err);
+    }
+  }, []);
+
+  // Tự động tải từ Master Database khi mở máy và polling định kỳ để đồng bộ xuyên suốt các thiết bị
+  useEffect(() => {
+    let isMounted = true;
+
+    const runSync = async () => {
+      if (isMounted) {
+        await loadMasterData();
+      }
+    };
+
+    runSync();
+
+    const interval = setInterval(runSync, 7000);
+    window.addEventListener('focus', runSync);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('focus', runSync);
+    };
+  }, [loadMasterData]);
 
   // Handlers for Turso sync
   const handleSyncToCloud = async () => {
@@ -689,6 +785,12 @@ export default function MainPage() {
         return updated;
       });
     }
+
+    fetch('/api/turso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_school_info', payload: updatedInfo }),
+    }).catch(() => {});
   };
 
   // Handler for Logo update
@@ -712,12 +814,14 @@ export default function MainPage() {
       : [record, ...step1Data];
     setStep1Data(updated);
     moduleStorage.saveStep1(updated);
+    syncModuleToServer('step1', updated);
   };
 
   const handleDeleteStep1 = (id: string) => {
     const updated = step1Data.filter((r) => r.id !== id);
     setStep1Data(updated);
     moduleStorage.saveStep1(updated);
+    syncModuleToServer('step1', updated);
   };
 
   // CRUD Handlers for Step 2
@@ -728,12 +832,14 @@ export default function MainPage() {
       : [record, ...step2Data];
     setStep2Data(updated);
     moduleStorage.saveStep2(updated);
+    syncModuleToServer('step2', updated);
   };
 
   const handleDeleteStep2 = (id: string) => {
     const updated = step2Data.filter((r) => r.id !== id);
     setStep2Data(updated);
     moduleStorage.saveStep2(updated);
+    syncModuleToServer('step2', updated);
   };
 
   // CRUD Handlers for Step 3
@@ -744,12 +850,14 @@ export default function MainPage() {
       : [record, ...step3Data];
     setStep3Data(updated);
     moduleStorage.saveStep3(updated);
+    syncModuleToServer('step3', updated);
   };
 
   const handleDeleteStep3 = (id: string) => {
     const updated = step3Data.filter((r) => r.id !== id);
     setStep3Data(updated);
     moduleStorage.saveStep3(updated);
+    syncModuleToServer('step3', updated);
   };
 
   // CRUD Handlers for Menu
@@ -760,12 +868,14 @@ export default function MainPage() {
       : [item, ...menuData];
     setMenuData(updated);
     moduleStorage.saveMenu(updated);
+    syncModuleToServer('menu', updated);
   };
 
   const handleDeleteMenu = (id: string) => {
     const updated = menuData.filter((r) => r.id !== id);
     setMenuData(updated);
     moduleStorage.saveMenu(updated);
+    syncModuleToServer('menu', updated);
   };
 
   // CRUD Handlers for Samples
@@ -776,12 +886,14 @@ export default function MainPage() {
       : [record, ...samplesData];
     setSamplesData(updated);
     moduleStorage.saveSamples(updated);
+    syncModuleToServer('samples', updated);
   };
 
   const handleDeleteSamples = (id: string) => {
     const updated = samplesData.filter((r) => r.id !== id);
     setSamplesData(updated);
     moduleStorage.saveSamples(updated);
+    syncModuleToServer('samples', updated);
   };
 
   // CRUD Handlers for Students
@@ -792,12 +904,14 @@ export default function MainPage() {
       : [record, ...studentsData];
     setStudentsData(updated);
     moduleStorage.saveStudents(updated);
+    syncModuleToServer('students', updated);
   };
 
   const handleDeleteStudents = (id: string) => {
     const updated = studentsData.filter((r) => r.id !== id);
     setStudentsData(updated);
     moduleStorage.saveStudents(updated);
+    syncModuleToServer('students', updated);
   };
 
   // CRUD Handlers for Health
@@ -808,12 +922,14 @@ export default function MainPage() {
       : [record, ...healthData];
     setHealthData(updated);
     moduleStorage.saveHealth(updated);
+    syncModuleToServer('health', updated);
   };
 
   const handleDeleteHealth = (id: string) => {
     const updated = healthData.filter((r) => r.id !== id);
     setHealthData(updated);
     moduleStorage.saveHealth(updated);
+    syncModuleToServer('health', updated);
   };
 
   // CRUD Handlers for Staff
@@ -824,12 +940,14 @@ export default function MainPage() {
       : [record, ...staffData];
     setStaffData(updated);
     moduleStorage.saveStaff(updated);
+    syncModuleToServer('staff', updated);
   };
 
   const handleDeleteStaff = (id: string) => {
     const updated = staffData.filter((r) => r.id !== id);
     setStaffData(updated);
     moduleStorage.saveStaff(updated);
+    syncModuleToServer('staff', updated);
   };
 
   // CRUD Handlers for Lesson Plans
@@ -840,12 +958,14 @@ export default function MainPage() {
       : [plan, ...lessonsData];
     setLessonsData(updated);
     moduleStorage.saveLessons(updated);
+    syncModuleToServer('lessonPlans', updated);
   };
 
   const handleDeleteLessons = (id: string) => {
     const updated = lessonsData.filter((r) => r.id !== id);
     setLessonsData(updated);
     moduleStorage.saveLessons(updated);
+    syncModuleToServer('lessonPlans', updated);
   };
 
   // CRUD Handlers for Teacher Salaries
@@ -856,12 +976,14 @@ export default function MainPage() {
       : [salary, ...salariesData];
     setSalariesData(updated);
     moduleStorage.saveSalaries(updated);
+    syncModuleToServer('salaries', updated);
   };
 
   const handleDeleteSalary = (id: string) => {
     const updated = salariesData.filter((r) => r.id !== id);
     setSalariesData(updated);
     moduleStorage.saveSalaries(updated);
+    syncModuleToServer('salaries', updated);
   };
 
   // CRUD Handlers for Finance Transactions
@@ -872,12 +994,14 @@ export default function MainPage() {
       : [tx, ...transactionsData];
     setTransactionsData(updated);
     moduleStorage.saveTransactions(updated);
+    syncModuleToServer('finance', updated);
   };
 
   const handleDeleteTransaction = (id: string) => {
     const updated = transactionsData.filter((r) => r.id !== id);
     setTransactionsData(updated);
     moduleStorage.saveTransactions(updated);
+    syncModuleToServer('finance', updated);
   };
 
   // Compute counts for sidebar badges

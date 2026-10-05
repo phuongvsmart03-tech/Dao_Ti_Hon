@@ -105,14 +105,13 @@ export default function HistoryAuditTab({
 
   const handleRestoreItem = (log: AuditLogRecord) => {
     if (!log.canUndo || !log.previousData) {
-      alert('Thao tác này không có bản sao lưu trước đó để khôi phục.');
+      setRestoreSuccessMessage('Thao tác này không có bản sao lưu trước đó để khôi phục.');
+      setTimeout(() => setRestoreSuccessMessage(null), 3000);
       return;
     }
-    if (confirm(`Bạn có chắc muốn khôi phục thao tác: "${log.description}"?`)) {
-      onRestore(log);
-      setRestoreSuccessMessage(`Đã khôi phục thành công: ${log.description}`);
-      setTimeout(() => setRestoreSuccessMessage(null), 4000);
-    }
+    onRestore(log);
+    setRestoreSuccessMessage(`Đã khôi phục thành công: ${log.description}`);
+    setTimeout(() => setRestoreSuccessMessage(null), 4000);
   };
 
   const getActionBadge = (action: AuditLogRecord['action']) => {
@@ -202,9 +201,9 @@ export default function HistoryAuditTab({
             <button
               type="button"
               onClick={() => {
-                if (confirm('Bạn có chắc muốn xóa toàn bộ lịch sử thao tác? Dữ liệu nghiệp vụ sẽ không bị ảnh hưởng.')) {
-                  onClearLogs();
-                }
+                onClearLogs();
+                setRestoreSuccessMessage('Đã làm trống toàn bộ lịch sử thao tác');
+                setTimeout(() => setRestoreSuccessMessage(null), 3000);
               }}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors cursor-pointer border border-rose-200"
             >

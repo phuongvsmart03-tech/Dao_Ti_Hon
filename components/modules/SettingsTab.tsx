@@ -148,13 +148,11 @@ export default function SettingsTab({
   };
 
   const handleResetToInitial = () => {
-    if (confirm('Bạn có chắc muốn khôi phục về cấu hình mẫu mặc định?')) {
-      setFormData(initialSchoolInfo);
-      onSave(initialSchoolInfo, true);
-      saveSchoolInfo(initialSchoolInfo);
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 4000);
-    }
+    setFormData(initialSchoolInfo);
+    onSave(initialSchoolInfo, true);
+    saveSchoolInfo(initialSchoolInfo);
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 4000);
   };
 
   return (

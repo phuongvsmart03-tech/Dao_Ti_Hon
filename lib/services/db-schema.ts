@@ -263,6 +263,33 @@ export const TABLE_DEFINITIONS: string[] = [
     is_favorite INTEGER DEFAULT 0,
     ingredients_json TEXT,
     updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+  )`,
+  `CREATE TABLE IF NOT EXISTS app_settings (
+    id TEXT PRIMARY KEY,
+    key TEXT NOT NULL UNIQUE,
+    value_json TEXT NOT NULL,
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+  )`,
+  `CREATE TABLE IF NOT EXISTS audit_logs (
+    id TEXT PRIMARY KEY,
+    timestamp TEXT NOT NULL,
+    display_time TEXT NOT NULL,
+    action TEXT NOT NULL,
+    action_label TEXT NOT NULL,
+    module TEXT NOT NULL,
+    module_name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    can_undo INTEGER DEFAULT 0,
+    previous_data_json TEXT,
+    target_id TEXT,
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+  )`,
+  `CREATE TABLE IF NOT EXISTS lightning_state (
+    id TEXT PRIMARY KEY,
+    custom_dishes_json TEXT,
+    custom_counts_json TEXT,
+    default_settings_json TEXT,
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
   )`
 ];
 
