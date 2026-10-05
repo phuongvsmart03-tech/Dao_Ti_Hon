@@ -719,29 +719,35 @@ export default function LightningModule({
 
   return (
     <div className="w-full space-y-5">
-      {/* Header Banner Trích Xuất Hồ Sơ */}
-      <div className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-2xl p-5 sm:p-6 text-white shadow-lg relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+      {/* Header Banner Trích Xuất Hồ Sơ - Rich Royal Oceanic Blue SaaS Style */}
+      <div className="w-full bg-gradient-to-r from-[#0a2550] via-[#103a75] to-[#0c2e62] text-white rounded-2xl p-5 sm:p-6 border border-blue-600/40 shadow-lg relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider mb-2">
-              <FileCheck className="w-4 h-4 text-amber-200" />
-              <span>Kiểm Soát Hồ Sơ Quy Định Bộ GD&amp;ĐT &amp; Bộ Y Tế</span>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-blue-200 font-medium">
+              <span className="text-blue-300 font-bold flex items-center gap-1.5 bg-blue-900/60 px-2 py-0.5 rounded-md border border-blue-400/30">
+                <FileCheck className="w-3.5 h-3.5 text-blue-300" />
+                Chuẩn QĐ 1246/QĐ-BYT
+              </span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="text-blue-100 font-medium">Bộ Giáo Dục &amp; Đào Tạo</span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="font-mono text-blue-200 font-semibold">{dateList.length} ngày trích xuất</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-              Phân Hệ: Trích Xuất Hồ Sơ Kiểm Thực 3 Bước &amp; Tiền Ăn
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white drop-shadow-xs">
+              Trích Xuất Hồ Sơ Kiểm Thực 3 Bước &amp; Tiền Ăn
             </h2>
-            <p className="text-amber-100 text-xs sm:text-sm mt-1 max-w-3xl">
-              Hệ thống trích xuất và quản lý hồ sơ kiểm thực 3 bước, sổ lưu mẫu &amp; tính định mức tiền ăn theo đúng quy chuẩn pháp lý của Bộ GD&amp;ĐT và Bộ Y Tế.
+            <p className="text-blue-100/90 text-xs sm:text-sm max-w-3xl leading-relaxed font-normal">
+              Tự động bóc tách định lượng thực đơn, bảng kê nguyên liệu sạch, giám sát chế biến, chia ăn và sổ hủy mẫu 24h chuẩn quy định.
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => setIsPrintModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 bg-white text-amber-900 hover:bg-amber-50 font-bold px-6 py-3.5 rounded-xl shadow-md transition-all hover:scale-105 active:scale-95 text-sm cursor-pointer whitespace-nowrap"
+            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-3 rounded-xl shadow-md transition-all active:scale-95 text-xs sm:text-sm cursor-pointer whitespace-nowrap border border-blue-400/40 shrink-0"
           >
-            <Printer className="w-5 h-5 text-amber-600" />
+            <Printer className="w-4 h-4 text-white" />
             <span>XUẤT IN TOÀN BỘ HỒ SƠ ({dateList.length} NGÀY)</span>
           </button>
         </div>
@@ -750,24 +756,24 @@ export default function LightningModule({
       {/* Control Dashboard: 3 Cột cấu hình nhanh */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
         {/* Cột 1: Chọn khoảng thời gian & Chọn nhanh (Khoảng ngày / Theo Tuần / Cả Tháng) */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-3.5">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2.5">
-              <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
-                <Calendar className="w-4 h-4 text-amber-600" />
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+                <Calendar className="w-4 h-4 text-emerald-600" />
                 <span>1. Khoảng Thời Gian Hồ Sơ</span>
               </div>
             </div>
 
             {/* 3 Chế Độ Chọn: Khoảng Ngày | Theo Tuần | Cả Tháng */}
-            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl mb-3 border border-slate-200/80">
+            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100/90 rounded-xl mb-3 border border-slate-200/80">
               <button
                 type="button"
                 onClick={() => setDateMode('range')}
-                className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                className={`py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   dateMode === 'range'
-                    ? 'bg-white text-amber-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    ? 'bg-white text-slate-900 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Khoảng ngày
@@ -778,10 +784,10 @@ export default function LightningModule({
                   setDateMode('week');
                   handleSelectWeek(selectedWeekDate || startDate);
                 }}
-                className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                className={`py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   dateMode === 'week'
-                    ? 'bg-white text-amber-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    ? 'bg-white text-slate-900 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Theo tuần
@@ -792,10 +798,10 @@ export default function LightningModule({
                   setDateMode('month');
                   handleSelectMonth(selectedMonth);
                 }}
-                className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                className={`py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   dateMode === 'month'
-                    ? 'bg-white text-amber-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    ? 'bg-white text-slate-900 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Cả tháng
@@ -942,14 +948,14 @@ export default function LightningModule({
           </div>
 
           {/* Hộp tóm tắt số ngày đã lọc */}
-          <div className="p-2.5 rounded-lg bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-950 flex flex-col gap-1">
+          <div className="p-2.5 rounded-lg bg-blue-50/90 border border-blue-200 text-xs text-blue-950 flex flex-col gap-1">
             <div className="flex items-center justify-between">
               <span className="text-slate-600 font-medium">Hồ sơ được xác định:</span>
-              <strong className="font-extrabold text-sm text-emerald-900">
+              <strong className="font-extrabold text-sm text-blue-900">
                 {dateList.length} ngày
               </strong>
             </div>
-            <div className="text-[10.5px] text-emerald-800 flex items-center justify-between">
+            <div className="text-[10.5px] text-blue-800 flex items-center justify-between">
               <span>
                 {includeSunday
                   ? 'Gồm cả Thứ 7 & Chủ Nhật'
@@ -963,16 +969,16 @@ export default function LightningModule({
         </div>
 
         {/* Cột 2: Đơn Giá & Khẩu Phần */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4">
           <div>
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-800 border-b border-slate-100 pb-2 mb-3">
-              <DollarSign className="w-4 h-4 text-emerald-600" />
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100 pb-2.5 mb-3">
+              <DollarSign className="w-4 h-4 text-blue-600" />
               <span>2. Đơn Giá &amp; Khẩu Phần</span>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Tiền ăn Nhà Trẻ:</label>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tiền ăn Nhà Trẻ:</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -984,13 +990,13 @@ export default function LightningModule({
                       const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
                       setNurseryPrice(val);
                     }}
-                    className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+                    className="w-full text-xs font-mono font-bold border border-slate-300 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-blue-500 bg-slate-50 tabular-nums"
                   />
                   <span className="absolute right-2 top-2 text-[11px] text-slate-400">đ</span>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Tiền ăn Mẫu Giáo:</label>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tiền ăn Mẫu Giáo:</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -1002,7 +1008,7 @@ export default function LightningModule({
                       const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
                       setKindergartenPrice(val);
                     }}
-                    className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+                    className="w-full text-xs font-mono font-bold border border-slate-300 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-blue-500 bg-slate-50 tabular-nums"
                   />
                   <span className="absolute right-2 top-2 text-[11px] text-slate-400">đ</span>
                 </div>
@@ -1011,7 +1017,7 @@ export default function LightningModule({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Suất NT mặc định:</label>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Suất NT mặc định:</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -1022,13 +1028,13 @@ export default function LightningModule({
                       const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
                       setNurseryCount(val);
                     }}
-                    className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+                    className="w-full text-xs font-mono font-bold border border-slate-300 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-blue-500 bg-slate-50 tabular-nums"
                   />
                   <span className="absolute right-2 top-2 text-[11px] text-slate-400">bé</span>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Suất MG mặc định:</label>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Suất MG mặc định:</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -1039,7 +1045,7 @@ export default function LightningModule({
                       const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
                       setKindergartenCount(val);
                     }}
-                    className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+                    className="w-full text-xs font-mono font-bold border border-slate-300 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-blue-500 bg-slate-50 tabular-nums"
                   />
                   <span className="absolute right-2 top-2 text-[11px] text-slate-400">bé</span>
                 </div>
@@ -1047,23 +1053,23 @@ export default function LightningModule({
             </div>
           </div>
 
-          <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-900 leading-tight">
-            💡 <strong>Nhập trực tiếp:</strong> Bạn có thể gõ thay đổi số suất riêng của từng ngày tại 2 cột <strong>Suất NT</strong> &amp; <strong>Suất MG</strong> ở bảng bên dưới.
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 leading-relaxed">
+            💡 <span className="font-semibold text-slate-800">Nhập trực tiếp:</span> Thay đổi sĩ số từng ngày tại cột <strong className="text-slate-900">Suất NT</strong> &amp; <strong className="text-slate-900">Suất MG</strong> trong bảng bên dưới.
           </div>
         </div>
 
         {/* Cột 3: Tùy chọn Biểu mẫu & Nút In */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4">
           <div>
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-800 border-b border-slate-100 pb-2 mb-3">
-              <Layers className="w-4 h-4 text-amber-600" />
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100 pb-2.5 mb-3">
+              <Layers className="w-4 h-4 text-blue-600" />
               <span>3. Mẫu Cần Xuất In</span>
             </div>
 
             <select
               value={selectedTemplate}
               onChange={(e) => setSelectedTemplate(e.target.value as any)}
-              className="w-full text-xs font-medium border border-slate-300 rounded-lg px-3 py-2.5 bg-slate-50 focus:ring-2 focus:ring-amber-500 cursor-pointer"
+              className="w-full text-xs font-medium border border-slate-300 rounded-xl px-3 py-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-800"
             >
               <option value="all">Trọn Bộ Đầy Đủ 6 Biểu Mẫu (Chuẩn PDF GD&amp;ĐT)</option>
               <option value="menu_ration">Trang 1: Bảng Tính Khẩu Phần Ăn Hàng Ngày</option>
@@ -1078,28 +1084,28 @@ export default function LightningModule({
           <button
             type="button"
             onClick={() => setIsPrintModalOpen(true)}
-            className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-sm shadow-md transition-all cursor-pointer transform active:scale-98"
+            className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer active:scale-98"
           >
-            <Printer className="w-5 h-5" />
+            <Printer className="w-4 h-4 text-blue-200" />
             <span>XUẤT IN TOÀN BỘ HỒ SƠ ({dateList.length} NGÀY)</span>
           </button>
         </div>
       </div>
 
       {/* Preview Card List & Table */}
-      <div className="w-full bg-white rounded-xl border border-slate-200 p-4 sm:p-6 shadow-xs space-y-4">
+      <div className="w-full bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-6 shadow-xs space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-6 h-6 text-emerald-700 shrink-0" />
+            <ShieldCheck className="w-6 h-6 text-blue-600 shrink-0" />
             <div>
-              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
                 <span>Bảng Tổng Hợp Dữ Liệu Hồ Sơ Kiểm Thực &amp; Điểm Danh</span>
-                <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  {dateList.length} ngày hồ sơ
+                <span className="text-xs text-slate-500 font-normal">
+                  ({dateList.length} ngày hồ sơ)
                 </span>
               </h3>
               <p className="text-xs text-slate-500 font-medium">
-                Thực đơn chia rõ 3 bữa. Chọn bất kỳ ngày nào để kiểm soát &amp; sửa danh sách điểm danh, hỗ trợ xóa trắng theo Ngày, Tuần, Tháng.
+                Thực đơn chia rõ 3 bữa. Nhấp vào bất kỳ bữa ăn nào để đổi món hoặc tùy chỉnh sĩ số từng ngày.
               </p>
             </div>
           </div>
@@ -1112,7 +1118,7 @@ export default function LightningModule({
                 setDailyAttendanceModalDate(startDate || toLocalDateString(new Date()));
                 setDailyAttendanceModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
               title="Vào trường kiểm soát điểm danh cho ngày bất kỳ"
             >
               <UserCheck className="w-4 h-4" />

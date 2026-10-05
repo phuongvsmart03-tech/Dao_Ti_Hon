@@ -280,24 +280,25 @@ export default function MenuManagement({
   return (
     <div className="space-y-6 pb-12">
       {/* 1. Header Banner & Thông báo vai trò Quản trị */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white p-6 rounded-2xl shadow-md border border-indigo-800/40 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[#0a2550] via-[#103a75] to-[#0c2e62] text-white p-5 sm:p-6 rounded-2xl shadow-lg border border-blue-600/40 relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase bg-amber-400 text-slate-950 rounded-md">
-                KHO QUẢN TRỊ MÓN ĂN GỐC
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-blue-200 font-medium">
+              <span className="text-blue-300 font-bold flex items-center gap-1.5 bg-blue-900/60 px-2 py-0.5 rounded-md border border-blue-400/30">
+                <Utensils className="w-3.5 h-3.5 text-blue-300" />
+                Kho Quản Trị Món Ăn &amp; Dinh Dưỡng
               </span>
-              <span className="px-2.5 py-1 text-[11px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-md flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Đồng bộ 100% với Tab 1 (Lên Lịch & Trích Xuất Hồ Sơ)
-              </span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="text-blue-100">Đồng bộ hồ sơ kiểm thực</span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="font-mono text-blue-200 font-semibold">{dishLibrary.length} món trong kho</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
-              <Utensils className="w-7 h-7 text-amber-400" />
-              Kho Quản Trị Món Ăn & Dinh Dưỡng Mầm Non
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2.5 drop-shadow-xs">
+              Kho Món Ăn &amp; Công Thức Dinh Dưỡng Mầm Non
             </h1>
-            <p className="text-sm text-slate-300 max-w-3xl leading-relaxed">
-              Quản lý danh mục <strong>30 món ăn chuẩn cơ sở</strong>, định lượng Calo, bóc tách nguyên liệu sạch (BOM) và tỷ lệ hao hụt. Bạn có thể thêm món mới tự do bằng <strong>AI thông minh</strong> hoặc xóa/sửa bất kỳ món nào.
+            <p className="text-xs sm:text-sm text-blue-100/90 max-w-3xl leading-relaxed font-normal">
+              Quản lý danh mục món ăn chuẩn cơ sở, định lượng Calo, bóc tách nguyên liệu sạch (BOM) và tỷ lệ hao hụt tự động tính theo số lượng học sinh.
             </p>
           </div>
 
@@ -306,10 +307,10 @@ export default function MenuManagement({
             <button
               type="button"
               onClick={handleRestoreDefaultDishes}
-              className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-slate-500 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+              className="px-3.5 py-2.5 bg-blue-900/70 hover:bg-blue-800 text-blue-100 border border-blue-400/30 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-xs"
               title="Khôi phục nguyên bản 30 món ăn gốc chuẩn cơ sở"
             >
-              <RotateCcw className="w-4 h-4 text-amber-400" />
+              <RotateCcw className="w-3.5 h-3.5 text-blue-300" />
               <span>Khôi phục 30 món gốc</span>
             </button>
 
@@ -319,17 +320,17 @@ export default function MenuManagement({
                 setIsAddingNew(!isAddingNew);
                 setAiAnalysisResult(null);
               }}
-              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer border border-blue-400/40"
             >
-              <Plus className="w-4 h-4 text-slate-950" />
-              <span>{isAddingNew ? 'Đóng Form thêm' : '+ Thêm món mới & AI'}</span>
+              <Plus className="w-4 h-4 text-white" />
+              <span>{isAddingNew ? 'Đóng Form' : '+ Thêm món mới & AI'}</span>
             </button>
           </div>
         </div>
 
         {/* Restore Toast Banner */}
         {showRestoreSuccess && (
-          <div className="mt-4 p-3 bg-emerald-500/20 border border-emerald-400 text-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+          <div className="mt-4 p-3 bg-emerald-950/60 border border-emerald-700/60 text-emerald-300 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             Đã khôi phục thành công toàn bộ kho món ăn về 30 món chuẩn cơ sở!
           </div>

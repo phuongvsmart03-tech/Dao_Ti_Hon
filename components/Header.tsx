@@ -148,7 +148,7 @@ export default function Header({
         }
       }
       return (
-        <div className="w-full h-full rounded-xl bg-white p-0.5 flex items-center justify-center overflow-hidden border border-emerald-300 shadow-2xs">
+        <div className="w-full h-full rounded-xl bg-white p-0.5 flex items-center justify-center overflow-hidden border border-blue-300 shadow-2xs">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={schoolInfo.logoUrl}
@@ -159,7 +159,7 @@ export default function Header({
       );
     }
     return (
-      <div className="w-full h-full rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-700 text-white flex items-center justify-center shadow-2xs">
+      <div className="w-full h-full rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-2xs">
         <School className="w-5 h-5" />
       </div>
     );
@@ -206,7 +206,7 @@ export default function Header({
           {/* School Name & Breadcrumb */}
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 leading-none">
-              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-800 truncate">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-blue-700 truncate">
                 {schoolInfo.department}
               </span>
               <span className="text-slate-300 hidden sm:inline">•</span>
@@ -216,7 +216,7 @@ export default function Header({
               <span className="text-slate-300 hidden 2xl:inline">•</span>
               <div className="hidden 2xl:inline-flex items-center gap-1 text-[11px] font-bold text-slate-700">
                 <span className="text-slate-400">Phân hệ:</span>
-                <span className="text-emerald-700 truncate max-w-[180px]">{activeModuleName}</span>
+                <span className="text-blue-700 truncate max-w-[180px]">{activeModuleName}</span>
               </div>
             </div>
             <h1
@@ -256,21 +256,21 @@ export default function Header({
                   title="Lịch điện tử & đồng hồ số thời gian thực (Bấm để xem lịch tháng chuẩn)"
                   className={`group flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all cursor-pointer shadow-2xs select-none ${
                     isCalendarPopupOpen
-                      ? 'bg-slate-100 border-emerald-500 ring-2 ring-emerald-500/20 text-slate-900'
+                      ? 'bg-slate-100 border-blue-500 ring-2 ring-blue-500/20 text-slate-900'
                       : 'bg-slate-50/90 hover:bg-slate-100/90 border-slate-200/90 text-slate-700'
                   }`}
                 >
-                  {/* Live pulsating green dot */}
+                  {/* Live pulsating blue dot */}
                   <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
                   </span>
 
                   {/* Digital Clock */}
                   <div className="flex items-center gap-0.5 font-mono text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
-                    <Clock className="w-3.5 h-3.5 text-emerald-700 shrink-0 mr-0.5" />
+                    <Clock className="w-3.5 h-3.5 text-blue-700 shrink-0 mr-0.5" />
                     <span>{timeHours}</span>
-                    <span className="text-emerald-600 animate-pulse font-normal">:</span>
+                    <span className="text-blue-600 animate-pulse font-normal">:</span>
                     <span>{timeMinutes}</span>
                     <span className="hidden xl:inline text-slate-400 text-[10px] font-semibold">:{timeSeconds}</span>
                   </div>
@@ -288,28 +288,28 @@ export default function Header({
                   {/* Dropdown Chevron */}
                   <ChevronDown
                     className={`w-3 h-3 text-slate-400 transition-transform duration-200 group-hover:text-slate-600 ${
-                      isCalendarPopupOpen ? 'rotate-180 text-emerald-700' : ''
+                      isCalendarPopupOpen ? 'rotate-180 text-blue-700' : ''
                     }`}
                   />
                 </button>
 
-                {/* Electronic Calendar Popover Modal/Panel - Luôn neo phía phải, không bị che khuất */}
+                {/* Electronic Calendar Popover Modal/Panel */}
                 {isCalendarPopupOpen && (
                   <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150">
                     {/* Top Digital Display Banner */}
-                    <div className="p-3 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-xl mb-3 shadow-xs">
+                    <div className="p-3 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white rounded-xl mb-3 shadow-xs">
                       <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                        <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span className="flex items-center gap-1 text-blue-400 font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
                           Thời gian thực hệ thống
                         </span>
                         <span className="font-mono text-[10px] text-slate-400">GMT+7</span>
                       </div>
 
                       <div className="flex items-baseline justify-between">
-                        <div className="font-mono text-2xl sm:text-3xl font-black text-emerald-400 tracking-wider">
+                        <div className="font-mono text-2xl sm:text-3xl font-black text-blue-400 tracking-wider">
                           {timeHours}:{timeMinutes}
-                          <span className="text-base text-emerald-200/90 font-bold ml-0.5">:{timeSeconds}</span>
+                          <span className="text-base text-blue-200/90 font-bold ml-0.5">:{timeSeconds}</span>
                         </div>
                         <div className="text-right">
                           <div className="text-xs font-bold text-white">{dayOfWeekName}</div>
@@ -349,7 +349,7 @@ export default function Header({
                       <button
                         type="button"
                         onClick={() => setCalendarViewDate(new Date())}
-                        className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-pointer transition-colors"
+                        className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 cursor-pointer transition-colors"
                         title="Về tháng hiện tại"
                       >
                         Hôm nay
@@ -383,7 +383,7 @@ export default function Header({
                             key={day}
                             className={`h-7 flex items-center justify-center rounded-lg text-[11px] font-medium transition-colors ${
                               isToday
-                                ? 'bg-emerald-600 text-white font-black shadow-xs ring-1 ring-emerald-500'
+                                ? 'bg-blue-600 text-white font-black shadow-xs ring-1 ring-blue-500'
                                 : isWeekend
                                 ? 'text-amber-700 hover:bg-amber-50'
                                 : 'text-slate-700 hover:bg-slate-100'
@@ -412,7 +412,7 @@ export default function Header({
             );
           })()}
           
-          {/* PRIMARY ACTION: Save & Cloud Status (Màu xanh: đã đồng bộ | Màu cam: đang lưu | Màu đỏ: lỗi offline) */}
+          {/* PRIMARY ACTION: Save & Cloud Status (Xanh dương: đã đồng bộ | Cam: đang lưu | Đỏ: lỗi offline) */}
           {onSaveCloud && (
             <button
               type="button"
@@ -429,7 +429,7 @@ export default function Header({
                 isSavingCloud
                   ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/25'
                   : isTursoConnected
-                  ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25'
+                  ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/25'
                   : 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/25'
               }`}
             >
@@ -443,11 +443,11 @@ export default function Header({
                 </>
               ) : isTursoConnected ? (
                 <>
-                  <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-100" />
+                  <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-100" />
                   <span className="hidden sm:inline">Đã Đồng Bộ</span>
                   <span className="sm:hidden">Đồng Bộ</span>
-                  {/* Status Dot: Green */}
-                  <span className="w-2 h-2 rounded-full bg-emerald-200 ring-2 ring-emerald-300/80 animate-pulse shrink-0" />
+                  {/* Status Dot: Blue */}
+                  <span className="w-2 h-2 rounded-full bg-blue-200 ring-2 ring-blue-300/80 animate-pulse shrink-0" />
                 </>
               ) : (
                 <>
@@ -506,13 +506,13 @@ export default function Header({
                       setIsExportMenuOpen(false);
                       onOpenReportModal();
                     }}
-                    className="w-full text-left p-2.5 rounded-xl hover:bg-emerald-50 text-slate-800 hover:text-emerald-950 transition-colors flex items-start gap-3 cursor-pointer group"
+                    className="w-full text-left p-2.5 rounded-xl hover:bg-blue-50 text-slate-800 hover:text-blue-950 transition-colors flex items-start gap-3 cursor-pointer group"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-100 text-emerald-800 group-hover:bg-emerald-600 group-hover:text-white transition-colors shrink-0">
+                    <div className="p-2 rounded-lg bg-blue-100 text-blue-800 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
                       <Printer className="w-4 h-4" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-bold text-slate-900 group-hover:text-emerald-900">
+                      <div className="text-xs font-bold text-slate-900 group-hover:text-blue-900">
                         {printButtonLabel}
                       </div>
                       <div className="text-[11px] text-slate-500">
@@ -553,9 +553,9 @@ export default function Header({
               type="button"
               onClick={onOpenAiModal}
               title="Trợ Lý AI Mầm Non: Soạn giáo án, Cân đối dinh dưỡng & Phân tích món ăn"
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200/90 transition-all cursor-pointer shadow-2xs active:scale-95"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200/90 transition-all cursor-pointer shadow-2xs active:scale-95"
             >
-              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
+              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
               <span className="hidden md:inline font-bold">Trợ Lý AI</span>
               <span className="md:hidden">AI</span>
             </button>
@@ -589,21 +589,21 @@ export default function Header({
             {isSystemMenuOpen && (
               <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                 {/* User Profile Header */}
-                <div className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100/80 mb-2">
+                <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100/80 mb-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-emerald-950">
+                    <span className="text-xs font-black text-blue-950">
                       Quản trị viên (Chủ trường)
                     </span>
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
                         isTursoConnected
-                          ? 'bg-emerald-200/80 text-emerald-900'
+                          ? 'bg-blue-200/80 text-blue-900'
                           : 'bg-amber-200/80 text-amber-900'
                       }`}
                     >
                       {isTursoConnected ? (
                         <>
-                          <Cloud className="w-3 h-3 text-emerald-700" />
+                          <Cloud className="w-3 h-3 text-blue-700" />
                           Đám mây kết nối
                         </>
                       ) : (
@@ -630,13 +630,13 @@ export default function Header({
                         setIsSystemMenuOpen(false);
                         onOpenTursoModal();
                       }}
-                      className="w-full text-left p-2.5 rounded-xl hover:bg-teal-50 text-slate-800 transition-colors flex items-center gap-3 cursor-pointer group"
+                      className="w-full text-left p-2.5 rounded-xl hover:bg-blue-50 text-slate-800 transition-colors flex items-center gap-3 cursor-pointer group"
                     >
-                      <div className="p-2 rounded-lg bg-teal-100 text-teal-800 group-hover:bg-teal-600 group-hover:text-white transition-colors shrink-0">
+                      <div className="p-2 rounded-lg bg-blue-100 text-blue-800 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
                         <Database className="w-4 h-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-slate-900 group-hover:text-teal-950">
+                        <div className="text-xs font-bold text-slate-900 group-hover:text-blue-950">
                           Trung Tâm Dữ Liệu Turso Cloud
                         </div>
                         <div className="text-[11px] text-slate-500">
@@ -675,9 +675,9 @@ export default function Header({
                       setIsSystemMenuOpen(false);
                       onOpenPinModal();
                     }}
-                    className="w-full text-left p-2.5 rounded-xl hover:bg-emerald-50/70 text-slate-800 transition-colors flex items-center gap-3 cursor-pointer group"
+                    className="w-full text-left p-2.5 rounded-xl hover:bg-blue-50/70 text-slate-800 transition-colors flex items-center gap-3 cursor-pointer group"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-100 text-emerald-800 group-hover:bg-emerald-600 group-hover:text-white transition-colors shrink-0">
+                    <div className="p-2 rounded-lg bg-blue-100 text-blue-800 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
                       <KeyRound className="w-4 h-4" />
                     </div>
                     <div className="min-w-0 flex-1">

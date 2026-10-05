@@ -134,33 +134,31 @@ export default function LessonPlans({
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
       {/* 1. THANH TIÊU ĐỀ & THÔNG TIN HÀNH CHÍNH (Metadata Bar) */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 shadow-xl border border-blue-800/40 relative overflow-hidden">
-        {/* Subtle decorative background circle */}
-        <div className="absolute -right-12 -top-12 w-64 h-64 rounded-full bg-blue-500/10 blur-2xl pointer-events-none" />
-
+      <div className="bg-gradient-to-r from-[#0a2550] via-[#103a75] to-[#0c2e62] text-white rounded-2xl p-5 sm:p-6 border border-blue-600/40 shadow-lg relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div>
-            <div className="flex items-center gap-2.5 mb-2">
-              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-500/20 text-blue-200 border border-blue-400/30 flex items-center gap-1.5">
-                <School className="w-3.5 h-3.5" />
-                UBND Xã Liên Hương • Mầm Non Đảo Tí Hon
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-blue-200 font-medium">
+              <span className="text-blue-300 font-bold flex items-center gap-1.5 bg-blue-900/60 px-2 py-0.5 rounded-md border border-blue-400/30">
+                <BookOpen className="w-3.5 h-3.5 text-blue-300" />
+                Hồ Sơ Giáo Dục
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                Năm học {adminInfo.schoolYear || '2025 - 2026'}
-              </span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="text-blue-100">STEAM 5E &amp; Khung Chuẩn Bộ GD&amp;ĐT</span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="font-mono text-blue-200 font-semibold">Năm học {adminInfo.schoolYear || '2025 - 2026'}</span>
             </div>
 
-            <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
-              <BookOpen className="w-8 h-8 text-sky-400" />
-              Hồ Sơ Kế Hoạch Chăm Sóc Giáo Dục Trẻ
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2.5 drop-shadow-xs">
+              Hồ Sơ Kế Hoạch Chăm Sóc &amp; Giáo Dục Trẻ
             </h1>
-            <p className="text-sm text-blue-100/90 mt-1 max-w-2xl leading-relaxed">
-              Hệ thống số hóa toàn diện 10 quyển giáo án mầm non chuẩn khung Word của khách hàng (A4 từng trang, viền hoa văn, TKB, TGB, Ma trận 3 cột, STEAM 5E) và đồng bộ Google Docs.
+            <p className="text-xs sm:text-sm text-blue-100/90 max-w-2xl leading-relaxed font-normal">
+              Hệ thống số hóa toàn diện 10 quyển giáo án mầm non chuẩn khung Word (A4 từng trang, TKB, TGB, Ma trận 3 cột, STEAM 5E) và xuất in chuẩn chỉ.
             </p>
           </div>
 
           {/* Hộp thông tin giáo viên & nút sửa */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 min-w-[280px]">
+          <div className="bg-blue-950/80 rounded-xl p-3.5 border border-blue-400/30 min-w-[280px]">
             {isEditingAdmin ? (
               <div className="space-y-2 text-xs">
                 <div>

@@ -379,18 +379,24 @@ export default function FinanceSalaryModule({
   return (
     <div className="w-full space-y-5">
       {/* Top Banner Header */}
-      <div className="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 rounded-2xl p-5 sm:p-6 text-white shadow-lg relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+      <div className="w-full bg-gradient-to-r from-[#0a2550] via-[#103a75] to-[#0c2e62] text-white rounded-2xl p-5 sm:p-6 border border-blue-600/40 shadow-lg relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider mb-2">
-              <DollarSign className="w-4 h-4 text-emerald-200" />
-              <span>Phân Hệ Kế Toán &amp; Tài Chính Mầm Non</span>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-blue-200 font-medium">
+              <span className="text-blue-300 font-bold flex items-center gap-1.5 bg-blue-900/60 px-2 py-0.5 rounded-md border border-blue-400/30">
+                <DollarSign className="w-3.5 h-3.5 text-blue-300" />
+                Kế Toán &amp; Tài Chính Mầm Non
+              </span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="text-blue-100">Dòng tiền &amp; Bảng lương</span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="font-mono text-blue-200 font-semibold">{filteredTransactions.length} giao dịch</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white drop-shadow-xs">
               Quản Lý Thu - Chi &amp; Bảng Lương Giáo Viên
             </h2>
-            <p className="text-emerald-100 text-xs sm:text-sm mt-1 max-w-3xl">
+            <p className="text-xs sm:text-sm text-blue-100/90 max-w-3xl leading-relaxed font-normal">
               Hệ thống tự động tính lương giáo viên, quản lý dòng tiền thu chi, định mức tiền ăn &amp; phân tích biểu đồ tài chính trực quan.
             </p>
           </div>
@@ -399,9 +405,9 @@ export default function FinanceSalaryModule({
             <button
               type="button"
               onClick={handleExportCsv}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all shadow-xs cursor-pointer border border-white/20"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-blue-900/70 hover:bg-blue-800 text-blue-100 text-xs font-semibold transition-all shadow-xs cursor-pointer border border-blue-400/30"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-300" />
+              <FileSpreadsheet className="w-4 h-4 text-blue-300" />
               <span>Xuất Excel (.CSV)</span>
             </button>
 
@@ -411,9 +417,9 @@ export default function FinanceSalaryModule({
                 setReportPrintType(activeTab === 'salary' ? 'salary_sheet' : 'cash_flow');
                 setIsReportPrintOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-900/80 hover:bg-emerald-950 text-white text-xs font-bold transition-all shadow-md cursor-pointer border border-emerald-400/40"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer border border-blue-400/40"
             >
-              <Printer className="w-4 h-4 text-emerald-300" />
+              <Printer className="w-4 h-4 text-white" />
               <span>In Báo Cáo Kế Toán</span>
             </button>
           </div>

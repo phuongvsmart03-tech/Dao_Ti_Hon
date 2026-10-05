@@ -134,20 +134,25 @@ export default function StudentManagement({
   return (
     <div className="space-y-4">
       {/* Banner */}
-      <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-2xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800 uppercase">
-                Phân hệ 6
+      <div className="bg-gradient-to-r from-[#0a2550] via-[#103a75] to-[#0c2e62] text-white rounded-2xl p-5 sm:p-6 border border-blue-600/40 shadow-lg relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-blue-200 font-medium">
+              <span className="text-blue-300 font-bold flex items-center gap-1.5 bg-blue-900/60 px-2 py-0.5 rounded-md border border-blue-400/30">
+                <Users className="w-3.5 h-3.5 text-blue-300" />
+                Học Sinh &amp; Điểm Danh
               </span>
-              <span className="text-xs text-slate-500 font-medium">Thông tư 28/2020/TT-BGDĐT</span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="text-blue-100">Thông tư 28/2020/TT-BGDĐT</span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="font-mono text-blue-200 font-semibold">{records.length} học sinh</span>
             </div>
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 mt-1">
-              Học sinh: Quản lý hồ sơ, danh sách lớp, phụ huynh & Điểm danh
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-xs">
+              Quản Lý Hồ Sơ Học Sinh &amp; Sổ Điểm Danh Chuyên Cần
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600">
-              Số hóa toàn diện thông tin lý lịch trẻ, phân lớp học, số liên lạc phụ huynh, chế độ ăn kiêng và sổ theo dõi chuyên cần.
+            <p className="text-xs sm:text-sm text-blue-100/90 max-w-3xl leading-relaxed font-normal">
+              Số hóa toàn diện thông tin lý lịch trẻ, phân lớp học, số liên lạc phụ huynh, chế độ ăn kiêng, tiền sử dị ứng và sổ theo dõi chuyên cần theo ngày.
             </p>
           </div>
 
@@ -155,36 +160,36 @@ export default function StudentManagement({
             <button
               type="button"
               onClick={() => setHeatmapOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl bg-blue-900/70 hover:bg-blue-800 text-blue-100 border border-blue-400/30 shadow-xs transition-colors cursor-pointer"
               title="Xem và chỉnh sửa lịch điểm danh, theo dõi chuyên cần học sinh"
             >
-              <CalendarDays className="w-4 h-4" />
+              <CalendarDays className="w-4 h-4 text-blue-300" />
               <span>Lịch Điểm Danh (Heatmap)</span>
             </button>
             <button
               type="button"
               onClick={handleOpenAdd}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-blue-700 hover:bg-blue-800 text-white shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-md transition-all cursor-pointer border border-blue-400/40"
             >
-              <Plus className="w-4 h-4" />
-              <span>Tiếp nhận học sinh mới</span>
+              <Plus className="w-4 h-4 text-white" />
+              <span>+ Tiếp nhận học sinh</span>
             </button>
             <button
               type="button"
               onClick={onPrintPreview}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium rounded-xl bg-blue-950/80 hover:bg-blue-900 text-blue-200 border border-blue-800/60 transition-colors cursor-pointer"
             >
-              <FileCheck className="w-4 h-4 text-emerald-700" />
+              <FileCheck className="w-4 h-4 text-slate-400" />
               <span>In danh sách</span>
             </button>
             {onClearAllSampleData && (
               <button
                 type="button"
                 onClick={onClearAllSampleData}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/60 transition-colors cursor-pointer"
                 title="Xóa toàn bộ data mẫu để tự nhập danh sách học sinh thực tế của trường"
               >
-                <Trash2 className="w-4 h-4 text-rose-600" />
+                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
                 <span>Xóa Data Mẫu</span>
               </button>
             )}
@@ -192,7 +197,7 @@ export default function StudentManagement({
         </div>
 
         {/* Filter Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 mt-4 pt-4 border-t border-slate-100">
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 mt-4 pt-4 border-t border-slate-800">
           <div className="sm:col-span-6 relative">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
             <input
@@ -200,7 +205,7 @@ export default function StudentManagement({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Tìm theo tên bé, mã định danh, phụ huynh, số điện thoại..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs sm:text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-700 bg-slate-900/90 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -209,7 +214,7 @@ export default function StudentManagement({
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full py-1.5 px-2.5 text-xs sm:text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+              className="w-full py-2 px-3 text-xs sm:text-sm rounded-xl border border-slate-700 bg-slate-900 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="all">Tất cả các lớp</option>
               <option value="Nhà Trẻ Hoa Cúc">Nhà Trẻ Hoa Cúc</option>
@@ -226,7 +231,7 @@ export default function StudentManagement({
             <select
               value={selectedAttendance}
               onChange={(e) => setSelectedAttendance(e.target.value)}
-              className="w-full py-1.5 px-2.5 text-xs sm:text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+              className="w-full py-2 px-3 text-xs sm:text-sm rounded-xl border border-slate-700 bg-slate-900 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="all">Tất cả điểm danh hôm nay</option>
               <option value="Có mặt">Có mặt</option>

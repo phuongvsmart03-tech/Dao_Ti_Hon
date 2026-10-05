@@ -15,6 +15,7 @@ import {
   X,
   Save,
   Copy,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Step2Record } from '@/types/preschool';
 import HistoricalDateFilterBar, { TimeFilterMode } from '@/components/HistoricalDateFilterBar';
@@ -185,19 +186,24 @@ export default function Step2Cooking({
   return (
     <div className="space-y-4">
       {/* Top Banner */}
-      <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-2xs">
+      <div className="bg-gradient-to-r from-[#0a2550] via-[#103a75] to-[#0c2e62] text-white rounded-2xl p-5 sm:p-6 border border-blue-600/40 shadow-lg relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800 uppercase">
-                Phân hệ 2
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-blue-200 font-medium">
+              <span className="text-blue-300 font-bold flex items-center gap-1.5 bg-blue-900/60 px-2 py-0.5 rounded-md border border-blue-400/30">
+                <FileSpreadsheet className="w-3.5 h-3.5 text-blue-300" />
+                Kiểm Thực Bước 2
               </span>
-              <span className="text-xs text-slate-500 font-medium">Kiểm thực 3 bước - QĐ 1246/QĐ-BYT</span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="text-blue-100">QĐ 1246/QĐ-BYT</span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="font-mono text-blue-200 font-semibold">{records.length} bản ghi</span>
             </div>
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 mt-1">
-              Sổ lưu bước 2: Quy trình chế biến, sơ chế thực phẩm
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-xs">
+              Sổ Lưu Bước 2: Quy Trình Chế Biến &amp; Nấu Nướng Thực Phẩm
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600">
+            <p className="text-xs sm:text-sm text-blue-100/90 max-w-3xl leading-relaxed font-normal">
               Ghi chép kiểm tra điều kiện vệ sinh khu sơ chế, thời gian đun nấu, nhiệt độ sôi và người chịu trách nhiệm bếp ăn bán trú.
             </p>
           </div>
@@ -206,24 +212,24 @@ export default function Step2Cooking({
             <button
               type="button"
               onClick={() => handleOpenAdd()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-blue-700 hover:bg-blue-800 text-white shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-md transition-all cursor-pointer border border-blue-400/40"
             >
-              <Plus className="w-4 h-4" />
-              <span>Thêm mới chế biến</span>
+              <Plus className="w-4 h-4 text-white" />
+              <span>+ Thêm mới chế biến</span>
             </button>
             <button
               type="button"
               onClick={onPrintPreview}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-medium rounded-xl bg-blue-950/80 hover:bg-blue-900 text-blue-200 border border-blue-800/60 transition-colors cursor-pointer"
             >
-              <FileCheck className="w-4 h-4 text-emerald-700" />
+              <FileCheck className="w-4 h-4 text-slate-400" />
               <span>In sổ bước 2</span>
             </button>
           </div>
         </div>
 
         {/* Filter Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 mt-4 pt-4 border-t border-slate-100">
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 mt-4 pt-4 border-t border-slate-800">
           <div className="sm:col-span-7 relative">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
             <input
@@ -231,7 +237,7 @@ export default function Step2Cooking({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Tìm theo món ăn, đầu bếp, người giám sát..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs sm:text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-700 bg-slate-900/90 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -240,7 +246,7 @@ export default function Step2Cooking({
             <select
               value={selectedMeal}
               onChange={(e) => setSelectedMeal(e.target.value)}
-              className="w-full py-1.5 px-2.5 text-xs sm:text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+              className="w-full py-2 px-3 text-xs sm:text-sm rounded-xl border border-slate-700 bg-slate-900 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="all">Tất cả các bữa ăn</option>
               <option value="Bữa sáng">Bữa sáng</option>
