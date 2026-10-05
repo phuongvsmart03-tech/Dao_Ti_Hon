@@ -25,10 +25,14 @@ import {
   Beef,
   Fish,
   Package,
+  Users,
+  DollarSign,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
 import { SchoolInfo } from '@/types/preschool';
 import { initialSchoolInfo } from '@/lib/mock-data';
-import { saveSchoolInfo } from '@/lib/storage';
+import { saveSchoolInfo, getDefaultSettings, saveDefaultSettings, AppDefaultSettings } from '@/lib/storage';
 import SignatureUploadBox from '@/components/SignatureUploadBox';
 
 interface SettingsTabProps {
@@ -44,32 +48,35 @@ export default function SettingsTab({
 }: SettingsTabProps) {
   const [formData, setFormData] = useState<SchoolInfo>(() => ({
     ...schoolInfo,
-    creatorName: schoolInfo.creatorName || 'NGUYỄN THU HẰNG',
-    teamLeaderNutritionName: schoolInfo.teamLeaderNutritionName || 'NGUYỄN THỊ THU HƯƠNG',
-    teamLeaderEducationName: schoolInfo.teamLeaderEducationName || 'TRẦN THỊ NGỌC MAI',
-    vicePrincipalName: schoolInfo.vicePrincipalName || 'HOÀNG THỊ THU TRANG',
-    accountantName: schoolInfo.accountantName || 'ĐỖ THỊ THANH',
-    inspectorName: schoolInfo.inspectorName || schoolInfo.medicalStaffName || 'BS. TRẦN THỊ THU HÀ',
-    receiverName: schoolInfo.receiverName || schoolInfo.headChefName || 'LÊ VĂN TÀI',
-    sampleKeeperName: schoolInfo.sampleKeeperName || schoolInfo.medicalStaffName || 'BS. TRẦN THỊ THU HÀ',
-    sampleDisposerName: schoolInfo.sampleDisposerName || schoolInfo.headChefName || 'LÊ VĂN TÀI',
-    principalName: schoolInfo.principalName || 'NGUYỄN THỊ MAI HOA',
+    creatorName: schoolInfo.creatorName || 'THANH XUÂN',
+    teamLeaderNutritionName: schoolInfo.teamLeaderNutritionName || 'HUỲNH THỊ HOA',
+    teamLeaderEducationName: schoolInfo.teamLeaderEducationName || 'THANH XUÂN',
+    vicePrincipalName: schoolInfo.vicePrincipalName || 'VÕ THỊ HỒNG SIM',
+    accountantName: schoolInfo.accountantName || 'THANH XUÂN',
+    inspectorName: schoolInfo.inspectorName || schoolInfo.medicalStaffName || 'THANH XUÂN',
+    receiverName: schoolInfo.receiverName || schoolInfo.headChefName || 'HUỲNH THỊ HOA',
+    sampleKeeperName: schoolInfo.sampleKeeperName || schoolInfo.medicalStaffName || 'HUỲNH THỊ HOA',
+    sampleDisposerName: schoolInfo.sampleDisposerName || schoolInfo.headChefName || 'HUỲNH THỊ HOA',
+    principalName: schoolInfo.principalName || 'VÕ THỊ HỒNG SIM',
     defaultPrintOrientation: schoolInfo.defaultPrintOrientation || 'landscape',
-    meatSupplierName: schoolInfo.meatSupplierName || 'Công ty CP Thực phẩm Sạch Ba Vì',
-    meatSupplierAddress: schoolInfo.meatSupplierAddress || 'KCN Hòa Lạc, Ba Vì, Hà Nội - ĐT: 024.3388.9911',
-    meatDelivererName: schoolInfo.meatDelivererName || 'Nguyễn Văn Tuấn',
-    vegSupplierName: schoolInfo.vegSupplierName || 'HTX Nông nghiệp An Toàn Đông Anh',
-    vegSupplierAddress: schoolInfo.vegSupplierAddress || 'Đông Anh, Hà Nội - ĐT: 0988.123.456',
-    vegDelivererName: schoolInfo.vegDelivererName || 'Vũ Đức Thịnh',
-    seafoodSupplierName: schoolInfo.seafoodSupplierName || 'HTX Thủy sản Ứng Hòa',
-    seafoodSupplierAddress: schoolInfo.seafoodSupplierAddress || 'Ứng Hòa, Hà Nội - ĐT: 0912.345.678',
-    seafoodDelivererName: schoolInfo.seafoodDelivererName || 'Nguyễn Văn Lâm',
-    dryProducerName: schoolInfo.dryProducerName || 'Nhà máy NS Miền Bắc',
-    dryProducerAddress: schoolInfo.dryProducerAddress || 'KCN Tiên Sơn, Bắc Ninh',
-    drySupplierName: schoolInfo.drySupplierName || 'Đại lý Bách Hóa Cầu Giấy',
-    drySupplierAddress: schoolInfo.drySupplierAddress || 'Số 28 Cầu Giấy, Hà Nội - ĐT: 024.3768.1234',
-    dryDelivererName: schoolInfo.dryDelivererName || 'Trần Văn Bình',
+    meatSupplierName: schoolInfo.meatSupplierName || 'Đại lý Thực phẩm Sạch Liên Hương',
+    meatSupplierAddress: schoolInfo.meatSupplierAddress || 'Chợ Liên Hương, Xã Liên Hương - ĐT: 0918.234.567',
+    meatDelivererName: schoolInfo.meatDelivererName || 'Trần Văn Hưng',
+    vegSupplierName: schoolInfo.vegSupplierName || 'Vựa Rau củ quả An Toàn Liên Hương',
+    vegSupplierAddress: schoolInfo.vegSupplierAddress || 'Xã Liên Hương - ĐT: 0988.112.233',
+    vegDelivererName: schoolInfo.vegDelivererName || 'Nguyễn Văn Tâm',
+    seafoodSupplierName: schoolInfo.seafoodSupplierName || 'Vựa Thủy Hải Sản Tươi Sống Liên Hương',
+    seafoodSupplierAddress: schoolInfo.seafoodSupplierAddress || 'Khu phố 1, Xã Liên Hương - ĐT: 0912.889.900',
+    seafoodDelivererName: schoolInfo.seafoodDelivererName || 'Lê Văn Hoàng',
+    dryProducerName: schoolInfo.dryProducerName || 'Nhà máy Phân phối Thực phẩm Bình Thuận',
+    dryProducerAddress: schoolInfo.dryProducerAddress || 'Tuy Phong, Bình Thuận',
+    drySupplierName: schoolInfo.drySupplierName || 'Cửa hàng Bách Hóa Tổng Hợp Liên Hương',
+    drySupplierAddress: schoolInfo.drySupplierAddress || 'Trung tâm Xã Liên Hương - ĐT: 0252.385.1234',
+    dryDelivererName: schoolInfo.dryDelivererName || 'Đặng Văn Long',
   }));
+
+  // Cấu hình mặc định hệ thống (Sĩ số bé ăn, Tiền ăn, Giờ kiểm thực)
+  const [defaultSettings, setDefaultSettingsState] = useState<AppDefaultSettings>(() => getDefaultSettings());
 
   const [autoCascade, setAutoCascade] = useState<boolean>(true);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -135,6 +142,7 @@ export default function SettingsTab({
     e.preventDefault();
     onSave(formData, autoCascade);
     saveSchoolInfo(formData);
+    saveDefaultSettings(defaultSettings);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 4000);
   };
@@ -152,31 +160,31 @@ export default function SettingsTab({
   return (
     <div className="w-full space-y-6">
       {/* Header card */}
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-emerald-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-blue-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-3.5">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-xs">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xs">
             <Settings className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg sm:text-xl font-bold text-slate-900">
-                Cấu hình Ký tên &amp; In ấn Phòng GD&amp;ĐT
+                Cấu hình Ký tên, Sĩ Số Mặc Định &amp; In ấn Phòng GD&amp;ĐT
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                Tự động điền biểu mẫu
+              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-900 border border-blue-300">
+                Tự động lưu &amp; Điền biểu mẫu
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Thiết lập tên người kiểm tra, người nhận hàng, chữ ký số mẫu và tự động chèn vào hồ sơ in.
+              Thiết lập tên người kiểm tra, số bé ăn mặc định, đơn giá tiền ăn, khung giờ kiểm thực và chữ ký số chuẩn.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {savedSuccess && (
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded-lg animate-fade-in flex items-center gap-1.5 shadow-xs">
-              <Check className="w-4 h-4 text-emerald-600" />
-              Đã lưu cấu hình &amp; chữ ký!
+            <span className="text-xs font-bold text-blue-900 bg-blue-100 border border-blue-300 px-3 py-1.5 rounded-lg animate-fade-in flex items-center gap-1.5 shadow-xs">
+              <Check className="w-4 h-4 text-blue-700" />
+              Đã lưu cấu hình &amp; cài đặt mặc định!
             </span>
           )}
           <button
@@ -184,22 +192,198 @@ export default function SettingsTab({
             onClick={() => {
               onSave(formData, autoCascade);
               saveSchoolInfo(formData);
+              saveDefaultSettings(defaultSettings);
               setSavedSuccess(true);
               setTimeout(() => setSavedSuccess(false), 3000);
             }}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
           >
             <Save className="w-4 h-4" />
-            Lưu &amp; Cập Nhật Chữ Ký
+            Lưu &amp; Cập Nhật Cấu Hình
           </button>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* KHỐI 0: CẤU HÌNH MẶC ĐỊNH SĨ SỐ BÉ ĂN & TIỀN ĂN (Lưu cố định) */}
+        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-blue-200 shadow-xs space-y-4">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <span>Cài Đặt Mặc Định Suất Ăn &amp; Khung Giờ Kiểm Thực (Tự Động Lưu)</span>
+                <span className="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                  Luôn ghi nhớ
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500">
+                Khi bạn chỉnh sửa hoặc lưu các giá trị ở đây, hệ thống sẽ tự động ghi nhớ làm giá trị mặc định cho mọi ngày và không bị mất khi tải lại trang.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Suất Nhà Trẻ */}
+            <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-200 space-y-1.5">
+              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span>Số bé Nhà Trẻ mặc định:</span>
+                <span className="text-[10px] text-blue-700 font-bold bg-blue-100 px-1.5 py-0.5 rounded">
+                  Suất NT
+                </span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  value={defaultSettings.nurseryCount}
+                  onChange={(e) =>
+                    setDefaultSettingsState({
+                      ...defaultSettings,
+                      nurseryCount: Math.max(0, parseInt(e.target.value, 10) || 0),
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm font-bold rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                <span className="absolute right-2.5 top-2 text-xs text-slate-400">bé</span>
+              </div>
+            </div>
+
+            {/* Suất Mẫu Giáo */}
+            <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-200 space-y-1.5">
+              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span>Số bé Mẫu Giáo mặc định:</span>
+                <span className="text-[10px] text-blue-700 font-bold bg-blue-100 px-1.5 py-0.5 rounded">
+                  Suất MG
+                </span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  value={defaultSettings.kindergartenCount}
+                  onChange={(e) =>
+                    setDefaultSettingsState({
+                      ...defaultSettings,
+                      kindergartenCount: Math.max(0, parseInt(e.target.value, 10) || 0),
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm font-bold rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                <span className="absolute right-2.5 top-2 text-xs text-slate-400">bé</span>
+              </div>
+            </div>
+
+            {/* Tiền ăn Nhà Trẻ */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span>Tiền ăn Nhà Trẻ:</span>
+                <span className="text-[10px] text-slate-600 font-mono">đ/bé/ngày</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="1000"
+                  min="0"
+                  value={defaultSettings.nurseryPrice}
+                  onChange={(e) =>
+                    setDefaultSettingsState({
+                      ...defaultSettings,
+                      nurseryPrice: Math.max(0, parseInt(e.target.value, 10) || 0),
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm font-bold rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                <span className="absolute right-2.5 top-2 text-xs text-slate-400">đ</span>
+              </div>
+            </div>
+
+            {/* Tiền ăn Mẫu Giáo */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span>Tiền ăn Mẫu Giáo:</span>
+                <span className="text-[10px] text-slate-600 font-mono">đ/bé/ngày</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="1000"
+                  min="0"
+                  value={defaultSettings.kindergartenPrice}
+                  onChange={(e) =>
+                    setDefaultSettingsState({
+                      ...defaultSettings,
+                      kindergartenPrice: Math.max(0, parseInt(e.target.value, 10) || 0),
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm font-bold rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                <span className="absolute right-2.5 top-2 text-xs text-slate-400">đ</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Giờ nhận hàng (Bước 1):
+              </label>
+              <input
+                type="time"
+                value={defaultSettings.step1Time}
+                onChange={(e) =>
+                  setDefaultSettingsState({ ...defaultSettings, step1Time: e.target.value })
+                }
+                className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 focus:bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Giờ chế biến (Bước 2):
+              </label>
+              <input
+                type="time"
+                value={defaultSettings.step2Time}
+                onChange={(e) =>
+                  setDefaultSettingsState({ ...defaultSettings, step2Time: e.target.value })
+                }
+                className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 focus:bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Giờ chia ăn / nếm (Bước 3):
+              </label>
+              <input
+                type="time"
+                value={defaultSettings.step3Time}
+                onChange={(e) =>
+                  setDefaultSettingsState({ ...defaultSettings, step3Time: e.target.value })
+                }
+                className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 focus:bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Giờ lưu mẫu 24h:
+              </label>
+              <input
+                type="time"
+                value={defaultSettings.sampleTime}
+                onChange={(e) =>
+                  setDefaultSettingsState({ ...defaultSettings, sampleTime: e.target.value })
+                }
+                className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 focus:bg-white"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* KHỐI 1: CẤU HÌNH NHÂN SỰ KÝ TÊN BIỂU MẪU (Theo yêu cầu Phòng GD&ĐT) */}
         <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs">
           <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 mb-5">
-            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
               <UserCheck className="w-5 h-5" />
             </div>
             <div>
@@ -214,13 +398,13 @@ export default function SettingsTab({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Người lập biểu */}
-            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200 space-y-2">
+            <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-200 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4 text-emerald-600" />
+                  <UserCheck className="w-4 h-4 text-blue-600" />
                   Người lập biểu / Cán bộ lập báo cáo
                 </label>
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">
+                <span className="text-[10px] bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full">
                   Người lập biểu
                 </span>
               </div>
@@ -230,8 +414,8 @@ export default function SettingsTab({
                 value={formData.creatorName || ''}
                 onChange={(e) => setFormData({ ...formData, creatorName: e.target.value })}
                 onBlur={handleNameBlur}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-semibold text-slate-900"
-                placeholder="VD: NGUYỄN THU HẰNG"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-semibold text-slate-900"
+                placeholder="VD: THANH XUÂN"
               />
               <p className="text-[11px] text-slate-500">
                 Xuất hiện ở vị trí <strong>NGƯỜI LẬP BIỂU</strong> trên tất cả biểu mẫu in chuẩn Phòng GD&amp;ĐT (Cột trái).
@@ -262,8 +446,8 @@ export default function SettingsTab({
                 value={formData.teamLeaderNutritionName || ''}
                 onChange={(e) => setFormData({ ...formData, teamLeaderNutritionName: e.target.value })}
                 onBlur={handleNameBlur}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-semibold text-slate-900"
-                placeholder="VD: NGUYỄN THỊ THU HƯƠNG"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-semibold text-slate-900"
+                placeholder="VD: HUỲNH THỊ HOA"
               />
               <p className="text-[11px] text-slate-500">
                 Xuất hiện ở vị trí <strong>TỔ TRƯỞNG CHUYÊN MÔN NUÔI</strong> khi in Thực đơn, Bếp ăn và Dinh dưỡng.
@@ -294,8 +478,8 @@ export default function SettingsTab({
                 value={formData.teamLeaderEducationName || ''}
                 onChange={(e) => setFormData({ ...formData, teamLeaderEducationName: e.target.value })}
                 onBlur={handleNameBlur}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-semibold text-slate-900"
-                placeholder="VD: TRẦN THỊ NGỌC MAI"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-semibold text-slate-900"
+                placeholder="VD: THANH XUÂN"
               />
               <p className="text-[11px] text-slate-500">
                 Xuất hiện ở vị trí <strong>TỔ TRƯỞNG CHUYÊN MÔN DẠY</strong> khi in Giáo án, Sổ theo dõi trẻ em &amp; Sức khỏe.
@@ -310,13 +494,13 @@ export default function SettingsTab({
             </div>
 
             {/* Kế toán / Phụ trách tài chính */}
-            <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-200 space-y-2">
+            <div className="p-4 rounded-xl bg-indigo-50/50 border border-indigo-200 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4 text-purple-600" />
+                  <UserCheck className="w-4 h-4 text-indigo-600" />
                   Kế toán trưởng / Phụ trách Tài chính &amp; Lương
                 </label>
-                <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-2 py-0.5 rounded-full">
+                <span className="text-[10px] bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 rounded-full">
                   Kế toán trưởng
                 </span>
               </div>
@@ -326,8 +510,8 @@ export default function SettingsTab({
                 value={formData.accountantName || ''}
                 onChange={(e) => setFormData({ ...formData, accountantName: e.target.value })}
                 onBlur={handleNameBlur}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-semibold text-slate-900"
-                placeholder="VD: ĐỖ THỊ THANH"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-semibold text-slate-900"
+                placeholder="VD: THANH XUÂN"
               />
               <p className="text-[11px] text-slate-500">
                 Xuất hiện ở vị trí <strong>KẾ TOÁN TRƯỞNG</strong> khi in Bảng lương, Phiếu lương và Sổ quỹ Thu - Chi.
@@ -345,11 +529,11 @@ export default function SettingsTab({
             <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
                   Người kiểm tra (Bước 1, 2, 3)
                 </label>
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">
-                  Cán bộ Y tế / Kiểm tra
+                <span className="text-[10px] bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full">
+                  Kiểm tra VSATTP
                 </span>
               </div>
               <input
@@ -358,11 +542,11 @@ export default function SettingsTab({
                 value={formData.inspectorName || ''}
                 onChange={(e) => setFormData({ ...formData, inspectorName: e.target.value })}
                 onBlur={handleNameBlur}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-semibold text-slate-800"
-                placeholder="VD: BS. TRẦN THỊ THU HÀ"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-semibold text-slate-900"
+                placeholder="VD: THANH XUÂN"
               />
               <p className="text-[11px] text-slate-500">
-                Xuất hiện ở vị trí <strong>Người kiểm tra</strong> tại bảng kiểm thực Bước 1 (Tươi sống &amp; Khô), Bước 2 và Bước 3.
+                Ký ở cột <strong>NGƯỜI KIỂM TRA</strong> trong Sổ Kiểm thực 3 bước.
               </p>
               <SignatureUploadBox
                 roleTitle="Người kiểm tra"
@@ -373,15 +557,15 @@ export default function SettingsTab({
               />
             </div>
 
-            {/* Người nhận hàng */}
+            {/* Người giao/nhận hàng */}
             <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                   <PackageCheck className="w-4 h-4 text-blue-600" />
-                  Người nhận hàng / Người được kiểm tra
+                  Người nhận hàng &amp; Chế biến (Bếp trưởng)
                 </label>
                 <span className="text-[10px] bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full">
-                  Bếp trưởng / Tiếp nhận
+                  Giao nhận / Nấu
                 </span>
               </div>
               <input
@@ -390,11 +574,11 @@ export default function SettingsTab({
                 value={formData.receiverName || ''}
                 onChange={(e) => setFormData({ ...formData, receiverName: e.target.value })}
                 onBlur={handleNameBlur}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-semibold text-slate-800"
-                placeholder="VD: LÊ VĂN TÀI"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-semibold text-slate-900"
+                placeholder="VD: HUỲNH THỊ HOA"
               />
               <p className="text-[11px] text-slate-500">
-                Xuất hiện ở vị trí <strong>Người nhận hàng</strong> (Bước 1) và <strong>Người được kiểm tra</strong> (Bước 2, Bước 3).
+                Ký ở cột <strong>NGƯỜI GIAO NHẬN / BẾP TRƯỞNG</strong> trong Sổ Bước 1 và Bước 2.
               </p>
               <SignatureUploadBox
                 roleTitle="Người nhận hàng"
@@ -409,11 +593,11 @@ export default function SettingsTab({
             <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <FileSpreadsheet className="w-4 h-4 text-purple-600" />
-                  Người lưu mẫu (Sổ lưu hủy mẫu 24h)
+                  <Flame className="w-4 h-4 text-amber-600" />
+                  Người lấy mẫu &amp; Niêm phong (Lưu mẫu 24h)
                 </label>
-                <span className="text-[10px] bg-purple-100 text-purple-800 font-semibold px-2 py-0.5 rounded-full">
-                  Cán bộ Lưu mẫu
+                <span className="text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full">
+                  Lưu mẫu
                 </span>
               </div>
               <input
@@ -422,14 +606,14 @@ export default function SettingsTab({
                 value={formData.sampleKeeperName || ''}
                 onChange={(e) => setFormData({ ...formData, sampleKeeperName: e.target.value })}
                 onBlur={handleNameBlur}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-semibold text-slate-800"
-                placeholder="VD: BS. TRẦN THỊ THU HÀ"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-semibold text-slate-900"
+                placeholder="VD: HUỲNH THỊ HOA"
               />
               <p className="text-[11px] text-slate-500">
-                Tự động điền vào Cột (11) <strong>Người lưu mẫu (ký, ghi rõ họ tên)</strong> trong Sổ lưu &amp; hủy mẫu thức ăn 24 giờ.
+                Ký ở cột <strong>NGƯỜI LẤY MẪU</strong> trong Sổ theo dõi lưu &amp; hủy mẫu thức ăn.
               </p>
               <SignatureUploadBox
-                roleTitle="Người lưu mẫu"
+                roleTitle="Người lấy mẫu"
                 staffName={formData.sampleKeeperName}
                 signatureUrl={formData.sampleKeeperSignature}
                 onSaveSignature={(dataUrl) => handleUpdateSignature('sampleKeeperSignature', dataUrl)}
@@ -441,11 +625,11 @@ export default function SettingsTab({
             <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <Flame className="w-4 h-4 text-amber-600" />
-                  Người hủy mẫu (Sổ lưu hủy mẫu 24h)
+                  <FileSpreadsheet className="w-4 h-4 text-rose-600" />
+                  Người hủy mẫu &amp; Ký xác nhận sau 24h
                 </label>
-                <span className="text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full">
-                  Bếp trưởng / Tiêu hủy
+                <span className="text-[10px] bg-rose-100 text-rose-800 font-semibold px-2 py-0.5 rounded-full">
+                  Hủy mẫu
                 </span>
               </div>
               <input
@@ -454,11 +638,11 @@ export default function SettingsTab({
                 value={formData.sampleDisposerName || ''}
                 onChange={(e) => setFormData({ ...formData, sampleDisposerName: e.target.value })}
                 onBlur={handleNameBlur}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-semibold text-slate-800"
-                placeholder="VD: LÊ VĂN TÀI"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-semibold text-slate-900"
+                placeholder="VD: HUỲNH THỊ HOA"
               />
               <p className="text-[11px] text-slate-500">
-                Tự động điền vào Cột (12) <strong>Người hủy mẫu (ký, ghi rõ họ tên)</strong> trong Sổ lưu &amp; hủy mẫu thức ăn 24 giờ.
+                Ký ở cột <strong>NGƯỜI HỦY MẪU</strong> sau 24 giờ lưu trữ đúng quy trình.
               </p>
               <SignatureUploadBox
                 roleTitle="Người hủy mẫu"
@@ -469,15 +653,15 @@ export default function SettingsTab({
               />
             </div>
 
-            {/* Hiệu trưởng / Đại diện BGH */}
-            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2 md:col-span-2">
+            {/* Hiệu trưởng */}
+            <div className="md:col-span-2 p-4 rounded-xl bg-blue-50/70 border border-blue-200 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4 text-emerald-700" />
-                  Hiệu trưởng / Đại diện Ban Giám hiệu
+                  <School className="w-4 h-4 text-blue-700" />
+                  Hiệu trưởng / Đại diện cơ sở Mầm non
                 </label>
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">
-                  Lãnh đạo đơn vị
+                <span className="text-[10px] bg-blue-100 text-blue-900 font-bold px-2.5 py-0.5 rounded-full">
+                  Thủ trưởng đơn vị
                 </span>
               </div>
               <input
@@ -486,11 +670,11 @@ export default function SettingsTab({
                 value={formData.principalName || ''}
                 onChange={(e) => setFormData({ ...formData, principalName: e.target.value })}
                 onBlur={handleNameBlur}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-semibold text-slate-800"
-                placeholder="VD: NGUYỄN THỊ MAI HOA"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-bold text-slate-900"
+                placeholder="VD: VÕ THỊ HỒNG SIM"
               />
               <p className="text-[11px] text-slate-500">
-                Xuất hiện ở vị trí <strong>Hiệu trưởng (Ký, đóng dấu)</strong> trên các báo cáo tổng hợp hành chính nộp Phòng GD&amp;ĐT.
+                Ký duyệt ở phần <strong>HIỆU TRƯỞNG / THỦ TRƯỞNG ĐƠN VỊ</strong> trên các biểu mẫu báo cáo tổng hợp.
               </p>
               <SignatureUploadBox
                 roleTitle="Hiệu trưởng"
@@ -521,8 +705,8 @@ export default function SettingsTab({
 
           {/* Phần I: Thực phẩm tươi sống */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase text-emerald-900 tracking-wider bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
-              <Truck className="w-4 h-4 text-emerald-700" />
+            <div className="flex items-center gap-2 text-xs font-bold uppercase text-blue-950 tracking-wider bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+              <Truck className="w-4 h-4 text-blue-700" />
               I. Thực phẩm tươi sống, đông lạnh: Thịt, cá, gia cầm, rau, củ, quả...
             </div>
 
@@ -539,8 +723,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.meatSupplierName || ''}
                   onChange={(e) => setFormData({ ...formData, meatSupplierName: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: Công ty CP Thực phẩm Sạch Ba Vì"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Đại lý Thực phẩm Sạch Liên Hương"
                 />
               </div>
               <div>
@@ -551,8 +735,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.meatSupplierAddress || ''}
                   onChange={(e) => setFormData({ ...formData, meatSupplierAddress: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: KCN Hòa Lạc, Ba Vì, Hà Nội - ĐT: 024.3388.9911"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Chợ Liên Hương, Xã Liên Hương - ĐT: 0918.234.567"
                 />
               </div>
               <div>
@@ -563,8 +747,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.meatDelivererName || ''}
                   onChange={(e) => setFormData({ ...formData, meatDelivererName: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: Nguyễn Văn Tuấn"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Trần Văn Hưng"
                 />
               </div>
             </div>
@@ -582,8 +766,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.vegSupplierName || ''}
                   onChange={(e) => setFormData({ ...formData, vegSupplierName: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: HTX Nông nghiệp An Toàn Đông Anh"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Vựa Rau củ quả An Toàn Liên Hương"
                 />
               </div>
               <div>
@@ -594,8 +778,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.vegSupplierAddress || ''}
                   onChange={(e) => setFormData({ ...formData, vegSupplierAddress: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: Đông Anh, Hà Nội - ĐT: 0988.123.456"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Xã Liên Hương - ĐT: 0988.112.233"
                 />
               </div>
               <div>
@@ -606,8 +790,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.vegDelivererName || ''}
                   onChange={(e) => setFormData({ ...formData, vegDelivererName: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: Vũ Đức Thịnh"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Nguyễn Văn Tâm"
                 />
               </div>
             </div>
@@ -625,8 +809,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.seafoodSupplierName || ''}
                   onChange={(e) => setFormData({ ...formData, seafoodSupplierName: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: HTX Thủy sản Ứng Hòa"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Vựa Thủy Hải Sản Tươi Sống Liên Hương"
                 />
               </div>
               <div>
@@ -637,8 +821,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.seafoodSupplierAddress || ''}
                   onChange={(e) => setFormData({ ...formData, seafoodSupplierAddress: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: Ứng Hòa, Hà Nội - ĐT: 0912.345.678"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Khu phố 1, Xã Liên Hương - ĐT: 0912.889.900"
                 />
               </div>
               <div>
@@ -649,8 +833,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.seafoodDelivererName || ''}
                   onChange={(e) => setFormData({ ...formData, seafoodDelivererName: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: Nguyễn Văn Lâm"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Lê Văn Hoàng"
                 />
               </div>
             </div>
@@ -672,8 +856,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.dryProducerName || ''}
                   onChange={(e) => setFormData({ ...formData, dryProducerName: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: Nhà máy NS Miền Bắc"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Nhà máy Phân phối Thực phẩm Bình Thuận"
                 />
               </div>
               <div>
@@ -684,8 +868,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.dryProducerAddress || ''}
                   onChange={(e) => setFormData({ ...formData, dryProducerAddress: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: KCN Tiên Sơn, Bắc Ninh"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Tuy Phong, Bình Thuận"
                 />
               </div>
               <div>
@@ -696,8 +880,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.drySupplierName || ''}
                   onChange={(e) => setFormData({ ...formData, drySupplierName: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: Đại lý Bách Hóa Cầu Giấy"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Cửa hàng Bách Hóa Tổng Hợp Liên Hương"
                 />
               </div>
               <div className="sm:col-span-2">
@@ -708,8 +892,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.drySupplierAddress || ''}
                   onChange={(e) => setFormData({ ...formData, drySupplierAddress: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: Số 28 Cầu Giấy, Hà Nội - ĐT: 024.3768.1234"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Trung tâm Xã Liên Hương - ĐT: 0252.385.1234"
                 />
               </div>
               <div>
@@ -720,8 +904,8 @@ export default function SettingsTab({
                   type="text"
                   value={formData.dryDelivererName || ''}
                   onChange={(e) => setFormData({ ...formData, dryDelivererName: e.target.value })}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
-                  placeholder="VD: Trần Văn Bình"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="VD: Đặng Văn Long"
                 />
               </div>
             </div>
@@ -731,7 +915,7 @@ export default function SettingsTab({
         {/* KHỐI 3: CẤU HÌNH KHỔ IN & QUY CHUẨN IN ẤN (Khổ ngang A4 mặc định) */}
         <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs">
           <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 mb-5">
-            <div className="p-2 rounded-lg bg-teal-50 text-teal-700 border border-teal-200">
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
               <Printer className="w-5 h-5" />
             </div>
             <div>
@@ -748,7 +932,7 @@ export default function SettingsTab({
             <label
               className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-3.5 ${
                 formData.defaultPrintOrientation === 'landscape'
-                  ? 'border-emerald-600 bg-emerald-50/50 text-emerald-950 shadow-xs'
+                  ? 'border-blue-600 bg-blue-50/50 text-blue-950 shadow-xs'
                   : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
               }`}
             >
@@ -758,17 +942,17 @@ export default function SettingsTab({
                 value="landscape"
                 checked={formData.defaultPrintOrientation === 'landscape'}
                 onChange={() => setFormData({ ...formData, defaultPrintOrientation: 'landscape' })}
-                className="mt-1 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                className="mt-1 text-blue-600 focus:ring-blue-500 cursor-pointer"
               />
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm">Khổ Ngang A4 (Landscape)</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-600 text-white">
                     Khuyến nghị &amp; Chuẩn Phòng GD
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  Tối ưu chiều rộng cho bảng biểu nhiều cột (12-16 cột): Bước 1, Bước 2, Bước 3 và Bảng tính khẩu phần ăn không bị co chữ.
+                  Tối ưu chiều rộng cho bảng biểu nhiều cột: Bước 1, Bước 2, Bước 3 và Bảng tính khẩu phần ăn không bị co chữ.
                 </p>
               </div>
             </label>
@@ -776,7 +960,7 @@ export default function SettingsTab({
             <label
               className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-3.5 ${
                 formData.defaultPrintOrientation === 'portrait'
-                  ? 'border-emerald-600 bg-emerald-50/50 text-emerald-950 shadow-xs'
+                  ? 'border-blue-600 bg-blue-50/50 text-blue-950 shadow-xs'
                   : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
               }`}
             >
@@ -786,7 +970,7 @@ export default function SettingsTab({
                 value="portrait"
                 checked={formData.defaultPrintOrientation === 'portrait'}
                 onChange={() => setFormData({ ...formData, defaultPrintOrientation: 'portrait' })}
-                className="mt-1 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                className="mt-1 text-blue-600 focus:ring-blue-500 cursor-pointer"
               />
               <div>
                 <div className="flex items-center gap-2">
@@ -810,7 +994,7 @@ export default function SettingsTab({
         {/* KHỐI 4: THÔNG TIN CƠ BẢN TRƯỜNG MẦM NON & PHÒNG GD */}
         <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs">
           <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 mb-5">
-            <div className="p-2 rounded-lg bg-sky-50 text-sky-700 border border-sky-200">
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
               <School className="w-5 h-5" />
             </div>
             <div>
@@ -833,8 +1017,8 @@ export default function SettingsTab({
                 required
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
-                placeholder="VD: PHÒNG GIÁO DỤC VÀ ĐÀO TẠO QUẬN CẦU GIẤY"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                placeholder="VD: PHÒNG GIÁO DỤC VÀ ĐÀO TẠO XÃ LIÊN HƯƠNG"
               />
             </div>
 
@@ -847,8 +1031,8 @@ export default function SettingsTab({
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-emerald-900"
-                placeholder="VD: TRƯỜNG MẦM NON HOA HƯỚNG DƯƠNG"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-blue-950"
+                placeholder="VD: MẦM NON TƯ THỤC ĐẢO TÍ HON"
               />
             </div>
 
@@ -861,7 +1045,7 @@ export default function SettingsTab({
                 required
                 value={formData.academicYear}
                 onChange={(e) => setFormData({ ...formData, academicYear: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Năm học 2024 - 2025"
               />
             </div>
@@ -874,8 +1058,8 @@ export default function SettingsTab({
                 type="text"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="024 3756 8899"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0913 456 789"
               />
             </div>
 
@@ -887,26 +1071,26 @@ export default function SettingsTab({
                 type="text"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Số 18 Phố Nguyễn Phong Sắc, Cầu Giấy, Hà Nội"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Xã Liên Hương, Huyện Tuy Phong, Tỉnh Bình Thuận"
               />
             </div>
           </div>
         </div>
 
         {/* KHỐI 5: TỰ ĐỘNG ÁP DỤNG VÀ ĐỒNG BỘ TOÀN BỘ DỮ LIỆU */}
-        <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 rounded-2xl p-5 border border-emerald-200 shadow-xs">
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 rounded-2xl p-5 border border-blue-200 shadow-xs">
           <label className="flex items-start gap-3 cursor-pointer select-none">
             <input
               type="checkbox"
               id="auto-cascade-checkbox"
               checked={autoCascade}
               onChange={(e) => setAutoCascade(e.target.checked)}
-              className="mt-1 w-4 h-4 text-emerald-600 rounded-sm border-slate-300 focus:ring-emerald-500 cursor-pointer"
+              className="mt-1 w-4 h-4 text-blue-600 rounded-sm border-slate-300 focus:ring-blue-500 cursor-pointer"
             />
             <div>
-              <span className="font-bold text-sm text-emerald-950 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span className="font-bold text-sm text-blue-950 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-blue-600" />
                 Tự động áp dụng và đồng bộ hóa toàn bộ dữ liệu lịch sử &amp; biểu mẫu hiện có
               </span>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
@@ -929,15 +1113,15 @@ export default function SettingsTab({
 
           <div className="w-full sm:w-auto flex items-center gap-3">
             {savedSuccess && (
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-300 flex items-center gap-1.5 animate-fadeIn">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-bold text-blue-900 bg-blue-100 px-3 py-1.5 rounded-xl border border-blue-300 flex items-center gap-1.5 animate-fadeIn">
+                <CheckCircle2 className="w-4 h-4 text-blue-600" />
                 Đã lưu &amp; đồng bộ thành công!
               </span>
             )}
             <button
               type="submit"
               id="save-school-settings-btn"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-sm font-bold shadow-md hover:shadow-lg active:scale-98 transition-all cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md hover:shadow-lg active:scale-98 transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
               Lưu Cấu hình &amp; Tự động áp dụng

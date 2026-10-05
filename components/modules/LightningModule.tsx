@@ -42,6 +42,8 @@ import { getStandardizedIngredientsForDish } from '@/lib/dish-database';
 import OfficialPrintView from '@/components/OfficialPrintView';
 import { getStoredDishLibrary } from '@/lib/dish-library';
 import DailyAttendanceModal from '@/components/DailyAttendanceModal';
+import { getDefaultSettings, saveDefaultSettings, AppDefaultSettings } from '@/lib/storage';
+import { Cog } from 'lucide-react';
 
 interface LightningModuleProps {
   schoolInfo: SchoolInfo;
@@ -136,18 +138,77 @@ export default function LightningModule({
     return toLocalDateString(new Date());
   });
 
-  // Số lượng bé & tiền ăn mặc định
+  // Cấu hình mặc định hệ thống (Sĩ số, Tiền ăn, Giờ kiểm thực)
+  const initialDefaults = useMemo(() => getDefaultSettings(), []);
+
+  // Số lượng bé & tiền ăn mặc định (Tự động lưu và tải từ localStorage)
   const [nurseryCount, setNurseryCount] = useState<number>(() => {
-    const nt = students.filter((s) => s.className.includes('Nhà Trẻ') || s.className.includes('Mầm'));
-    return nt.length > 0 ? nt.length : 35;
-  });
-  const [kindergartenCount, setKindergartenCount] = useState<number>(() => {
-    const kg = students.filter((s) => !s.className.includes('Nhà Trẻ') && !s.className.includes('Mầm'));
-    return kg.length > 0 ? kg.length : 110;
+    return initialDefaults.nurseryCount;
   });
 
-  const [nurseryPrice, setNurseryPrice] = useState<number>(30000);
-  const [kindergartenPrice, setKindergartenPrice] = useState<number>(35000);
+  const [kindergartenCount, setKindergartenCount] = useState<number>(() => {
+    return initialDefaults.kindergartenCount;
+  });
+
+  const [nurseryPrice, setNurseryPrice] = useState<number>(() => {
+    return initialDefaults.nurseryPrice;
+  });
+
+  const [kindergartenPrice, setKindergartenPrice] = useState<number>(() => {
+    return initialDefaults.kindergartenPrice;
+  });
+
+  const [defaultStep1Time, setDefaultStep1Time] = useState<string>(() => initialDefaults.step1Time || '06:30');
+  const [defaultStep2Time, setDefaultStep2Time] = useState<string>(() => initialDefaults.step2Time || '09:30');
+  const [defaultStep3Time, setDefaultStep3Time] = useState<string>(() => initialDefaults.step3Time || '10:30');
+  const [defaultSampleTime, setDefaultSampleTime] = useState<string>(() => initialDefaults.sampleTime || '10:45');
+
+  const [isDefaultModalOpen, setIsDefaultModalOpen] = useState<boolean>(false);
+  const [defaultToast, setDefaultToast] = useState<string | null>(null);
+
+  const handleSaveAllAsDefault = (
+    nCnt = nurseryCount,
+    kCnt = kindergartenCount,
+    nPr = nurseryPrice,
+    kPr = kindergartenPrice,
+    s1T = defaultStep1Time,
+    s2T = defaultStep2Time,
+    s3T = defaultStep3Time,
+    smT = defaultSampleTime
+  ) => {
+    saveDefaultSettings({
+      nurseryCount: nCnt,
+      kindergartenCount: kCnt,
+      nurseryPrice: nPr,
+      kindergartenPrice: kPr,
+      step1Time: s1T,
+      step2Time: s2T,
+      step3Time: s3T,
+      sampleTime: smT,
+      includeSaturday,
+      includeSunday,
+    });
+    setNurseryCount(nCnt);
+    setKindergartenCount(kCnt);
+    setNurseryPrice(nPr);
+    setKindergartenPrice(kPr);
+    setDefaultStep1Time(s1T);
+    setDefaultStep2Time(s2T);
+    setDefaultStep3Time(s3T);
+    setDefaultSampleTime(smT);
+    setIsDefaultModalOpen(false);
+    setDefaultToast('Đã lưu cấu hình mặc định (Sĩ số bé ăn, Tiền ăn, Giờ kiểm thực) thành công!');
+    setTimeout(() => setDefaultToast(null), 3500);
+  };
+
+  // Tự động lưu cấu hình mặc định (số bé, tiền ăn) vào localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        saveDefaultSettings({ nurseryCount, kindergartenCount, nurseryPrice, kindergartenPrice });
+      } catch {}
+    }
+  }, [nurseryCount, kindergartenCount, nurseryPrice, kindergartenPrice]);
 
   // Template lựa chọn in
   const [selectedTemplate, setSelectedTemplate] = useState<
@@ -971,9 +1032,20 @@ export default function LightningModule({
         {/* Cột 2: Đơn Giá & Khẩu Phần */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100 pb-2.5 mb-3">
-              <DollarSign className="w-4 h-4 text-blue-600" />
-              <span>2. Đơn Giá &amp; Khẩu Phần</span>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+                <DollarSign className="w-4 h-4 text-blue-600" />
+                <span>2. Đơn Giá &amp; Khẩu Phần</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDefaultModalOpen(true)}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors cursor-pointer"
+                title="Cài đặt mặc định hệ thống cho toàn bộ các ngày"
+              >
+                <Cog className="w-3.5 h-3.5" />
+                <span>Cài Đặt Mặc Định</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-3">
@@ -1015,7 +1087,7 @@ export default function LightningModule({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-2">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">Suất NT mặc định:</label>
                 <div className="relative">
@@ -1053,8 +1125,30 @@ export default function LightningModule({
             </div>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 leading-relaxed">
-            💡 <span className="font-semibold text-slate-800">Nhập trực tiếp:</span> Thay đổi sĩ số từng ngày tại cột <strong className="text-slate-900">Suất NT</strong> &amp; <strong className="text-slate-900">Suất MG</strong> trong bảng bên dưới.
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleSaveAllAsDefault()}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-300 font-bold text-xs transition-colors cursor-pointer"
+                title="Lưu các giá trị này làm mặc định cho tất cả ngày mới và lần dùng sau"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                <span>Lưu Làm Mặc Định</span>
+              </button>
+            </div>
+
+            <div className="p-2 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[10.5px] text-blue-900 leading-relaxed flex items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
+                <span>
+                  <strong>Tự động ghi nhớ:</strong> Sĩ số &amp; tiền ăn sẽ được lưu lại làm mặc định cho máy này.
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-blue-700 font-bold bg-blue-100/80 px-2 py-0.5 rounded-md shrink-0 border border-blue-300/60">
+                ✓ Đã lưu
+              </span>
+            </div>
           </div>
         </div>
 
@@ -1933,6 +2027,190 @@ export default function LightningModule({
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Xác nhận Xóa Trắng</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast thông báo Lưu mặc định */}
+      {defaultToast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
+          <div className="bg-blue-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl border border-blue-400 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{defaultToast}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Cài Đặt Mặc Định Hệ Thống (Sĩ số, Tiền ăn, Giờ kiểm thực) */}
+      {isDefaultModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-2xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-blue-200 space-y-5 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
+                  <Cog className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Cài Đặt Mặc Định Hệ Thống
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Giá trị cài đặt ở đây sẽ được lưu cố định và tự động áp dụng cho tất cả ngày mới.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDefaultModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Sĩ số ăn */}
+              <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200 space-y-3">
+                <div className="font-bold text-blue-950 flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-blue-600" />
+                  <span>1. Sĩ Số Bé Ăn Bán Trú Mặc Định</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Số bé Nhà Trẻ:
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={nurseryCount}
+                      onChange={(e) => setNurseryCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                      className="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-lg bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Số bé Mẫu Giáo:
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={kindergartenCount}
+                      onChange={(e) => setKindergartenCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                      className="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-lg bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Mức tiền ăn */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                  <span>2. Mức Tiền Ăn Mặc Định (VNĐ / Bé / Ngày)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Tiền ăn Nhà Trẻ:
+                    </label>
+                    <input
+                      type="number"
+                      step="1000"
+                      min="0"
+                      value={nurseryPrice}
+                      onChange={(e) => setNurseryPrice(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                      className="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-lg bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Tiền ăn Mẫu Giáo:
+                    </label>
+                    <input
+                      type="number"
+                      step="1000"
+                      min="0"
+                      value={kindergartenPrice}
+                      onChange={(e) => setKindergartenPrice(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                      className="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-lg bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Giờ quy trình kiểm thực */}
+              <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 space-y-3">
+                <div className="font-bold text-amber-950 flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-amber-700" />
+                  <span>3. Khung Giờ Kiểm Thực Mặc Định (Chuẩn BGD&amp;ĐT)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Giờ nhận hàng (B1):
+                    </label>
+                    <input
+                      type="time"
+                      value={defaultStep1Time}
+                      onChange={(e) => setDefaultStep1Time(e.target.value)}
+                      className="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-lg bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Giờ sơ chế &amp; nấu (B2):
+                    </label>
+                    <input
+                      type="time"
+                      value={defaultStep2Time}
+                      onChange={(e) => setDefaultStep2Time(e.target.value)}
+                      className="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-lg bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Giờ nếm &amp; chia ăn (B3):
+                    </label>
+                    <input
+                      type="time"
+                      value={defaultStep3Time}
+                      onChange={(e) => setDefaultStep3Time(e.target.value)}
+                      className="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-lg bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Giờ lưu mẫu 24h:
+                    </label>
+                    <input
+                      type="time"
+                      value={defaultSampleTime}
+                      onChange={(e) => setDefaultSampleTime(e.target.value)}
+                      className="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-lg bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsDefaultModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaveAllAsDefault()}
+                className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm cursor-pointer flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>Lưu &amp; Áp Dụng Mặc Định</span>
               </button>
             </div>
           </div>

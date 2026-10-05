@@ -233,24 +233,24 @@ export default function Step3Tasting({
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 mt-4 pt-4 border-t border-slate-800">
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 mt-4 pt-4 border-t border-blue-800/60">
           <div className="sm:col-span-7 relative">
-            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-blue-300" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Tìm theo món ăn, người thử nếm, cán bộ lưu..."
-              className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-700 bg-slate-900/90 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-blue-400/30 bg-blue-950/80 text-white placeholder:text-blue-300/60 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
 
           <div className="sm:col-span-5 flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+            <Filter className="w-4 h-4 text-blue-300 shrink-0" />
             <select
               value={selectedMeal}
               onChange={(e) => setSelectedMeal(e.target.value)}
-              className="w-full py-2 px-3 text-xs sm:text-sm rounded-xl border border-slate-700 bg-slate-900 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full py-2 px-3 text-xs sm:text-sm rounded-xl border border-blue-400/30 bg-blue-950 text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               <option value="all">Tất cả các bữa ăn</option>
               <option value="Bữa sáng">Bữa sáng</option>

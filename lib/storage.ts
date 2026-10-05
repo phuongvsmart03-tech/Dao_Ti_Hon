@@ -47,9 +47,78 @@ const STORAGE_KEYS = {
   SALARIES: 'preschool_module_salaries',
   TRANSACTIONS: 'preschool_module_transactions',
   AUDIT_LOGS: 'preschool_audit_logs',
+  APP_DEFAULTS: 'preschool_default_app_settings',
 };
 
 export const DEFAULT_PIN = '150520';
+
+export interface AppDefaultSettings {
+  nurseryCount: number;
+  kindergartenCount: number;
+  nurseryPrice: number;
+  kindergartenPrice: number;
+  step1Time: string;
+  step2Time: string;
+  step3Time: string;
+  sampleTime: string;
+  dateMode: 'range' | 'week' | 'month';
+  includeSaturday: boolean;
+  includeSunday: boolean;
+}
+
+export const DEFAULT_APP_SETTINGS: AppDefaultSettings = {
+  nurseryCount: 30,
+  kindergartenCount: 80,
+  nurseryPrice: 30000,
+  kindergartenPrice: 35000,
+  step1Time: '06:30',
+  step2Time: '09:30',
+  step3Time: '10:30',
+  sampleTime: '10:45',
+  dateMode: 'range',
+  includeSaturday: false,
+  includeSunday: false,
+};
+
+export function getDefaultSettings(): AppDefaultSettings {
+  if (typeof window === 'undefined') return DEFAULT_APP_SETTINGS;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.APP_DEFAULTS);
+    if (saved) {
+      return { ...DEFAULT_APP_SETTINGS, ...JSON.parse(saved) };
+    }
+    const nC = localStorage.getItem('lightning_default_nursery_count');
+    const kC = localStorage.getItem('lightning_default_kg_count');
+    const nP = localStorage.getItem('lightning_default_nursery_price');
+    const kP = localStorage.getItem('lightning_default_kg_price');
+    return {
+      ...DEFAULT_APP_SETTINGS,
+      nurseryCount: nC !== null && nC !== '' ? Number(nC) : DEFAULT_APP_SETTINGS.nurseryCount,
+      kindergartenCount: kC !== null && kC !== '' ? Number(kC) : DEFAULT_APP_SETTINGS.kindergartenCount,
+      nurseryPrice: nP !== null && nP !== '' ? Number(nP) : DEFAULT_APP_SETTINGS.nurseryPrice,
+      kindergartenPrice: kP !== null && kP !== '' ? Number(kP) : DEFAULT_APP_SETTINGS.kindergartenPrice,
+    };
+  } catch {
+    return DEFAULT_APP_SETTINGS;
+  }
+}
+
+export function saveDefaultSettings(settings: Partial<AppDefaultSettings>): AppDefaultSettings {
+  if (typeof window === 'undefined') return DEFAULT_APP_SETTINGS;
+  try {
+    const current = getDefaultSettings();
+    const updated = { ...current, ...settings };
+    localStorage.setItem(STORAGE_KEYS.APP_DEFAULTS, JSON.stringify(updated));
+    if (settings.nurseryCount !== undefined) localStorage.setItem('lightning_default_nursery_count', String(settings.nurseryCount));
+    if (settings.kindergartenCount !== undefined) localStorage.setItem('lightning_default_kg_count', String(settings.kindergartenCount));
+    if (settings.nurseryPrice !== undefined) localStorage.setItem('lightning_default_nursery_price', String(settings.nurseryPrice));
+    if (settings.kindergartenPrice !== undefined) localStorage.setItem('lightning_default_kg_price', String(settings.kindergartenPrice));
+    return updated;
+  } catch (e) {
+    console.error('Lỗi khi lưu cấu hình mặc định:', e);
+    return DEFAULT_APP_SETTINGS;
+  }
+}
 
 // Check if PIN requirement is disabled (Single user mode)
 // Defaults to true as requested by user to eliminate PIN entry friction
@@ -245,6 +314,11 @@ export const moduleStorage = {
     localStorage.removeItem(STORAGE_KEYS.SALARIES);
     localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(STORAGE_KEYS.SCHOOL_INFO);
+    localStorage.removeItem(STORAGE_KEYS.APP_DEFAULTS);
+    localStorage.removeItem('lightning_custom_dishes');
+    localStorage.removeItem('lightning_custom_counts');
+    localStorage.removeItem('preschool_custom_attendance');
+    localStorage.removeItem('preschool_daily_student_statuses');
   },
 
   getAllSnapshot: () => {
@@ -252,6 +326,7 @@ export const moduleStorage = {
       version: '2.0',
       exportedAt: new Date().toISOString(),
       schoolInfo: getSchoolInfo(),
+      defaults: getDefaultSettings(),
       step1: moduleStorage.getStep1(),
       step2: moduleStorage.getStep2(),
       step3: moduleStorage.getStep3(),
@@ -269,6 +344,7 @@ export const moduleStorage = {
   restoreSnapshot: (data: any) => {
     if (!data || typeof data !== 'object') return false;
     if (data.schoolInfo) saveSchoolInfo(data.schoolInfo);
+    if (data.defaults) saveDefaultSettings(data.defaults);
     if (Array.isArray(data.step1)) moduleStorage.saveStep1(data.step1);
     if (Array.isArray(data.step2)) moduleStorage.saveStep2(data.step2);
     if (Array.isArray(data.step3)) moduleStorage.saveStep3(data.step3);
@@ -310,6 +386,12 @@ export const moduleStorage = {
     moduleStorage.saveLessons([]);
     moduleStorage.saveSalaries([]);
     moduleStorage.saveTransactions([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('lightning_custom_dishes');
+      localStorage.removeItem('lightning_custom_counts');
+      localStorage.removeItem('preschool_custom_attendance');
+      localStorage.removeItem('preschool_daily_student_statuses');
+    }
   },
 };
 
@@ -338,7 +420,6 @@ export function exportToCsv(filename: string, headers: string[], rows: (string |
     ...rows.map((row) => row.map(processCell).join(',')),
   ].join('\r\n');
 
-  // \uFEFF is UTF-8 Byte Order Mark for Excel
   const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

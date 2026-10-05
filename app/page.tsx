@@ -84,8 +84,8 @@ export default function MainPage() {
     () => false
   );
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return getStoredSession();
+    if (typeof window === 'undefined') return true;
+    return isPinDisabled() || getStoredSession();
   });
   const [activeModuleId, setActiveModuleId] = useState<ModuleId>('lightning');
   const activeModuleConfig = useMemo(() => {

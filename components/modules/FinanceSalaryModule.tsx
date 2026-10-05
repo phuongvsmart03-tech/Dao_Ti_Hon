@@ -244,7 +244,7 @@ export default function FinanceSalaryModule({
     }));
   }, [filteredTransactions]);
 
-  // Trend Chart Data: 12 months simulation/aggregation
+  // Trend Chart Data: 12 months aggregation
   const monthlyTrendsData = useMemo(() => {
     const months = [
       '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'
@@ -253,23 +253,8 @@ export default function FinanceSalaryModule({
       const monthStr = `${selectedYear}-${m}`;
       const monthTxs = transactions.filter((t) => t.date.startsWith(monthStr));
       
-      let thu = monthTxs.filter((t) => t.type === 'thu').reduce((sum, t) => sum + t.amount, 0);
-      let chi = monthTxs.filter((t) => t.type === 'chi').reduce((sum, t) => sum + t.amount, 0);
-
-      // Deterministic baseline if month has no transactions yet to show beautiful chart
-      if (thu === 0 && chi === 0) {
-        const monthNum = parseInt(m, 10);
-        if (m === '05') {
-          thu = 346450000;
-          chi = 191440667;
-        } else if (m < '05') {
-          thu = 330000000 + monthNum * 3500000;
-          chi = 180000000 + monthNum * 2200000;
-        } else {
-          thu = 0;
-          chi = 0;
-        }
-      }
+      const thu = monthTxs.filter((t) => t.type === 'thu').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const chi = monthTxs.filter((t) => t.type === 'chi').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
       return {
         month: `Thg ${m}`,
@@ -282,13 +267,36 @@ export default function FinanceSalaryModule({
 
   // Weekly Breakdown for Current Month
   const weeklyTrendData = useMemo(() => {
+    const w1 = filteredTransactions.filter((t) => {
+      const day = parseInt(t.date.split('-')[2] || '1', 10);
+      return day <= 7;
+    });
+    const w2 = filteredTransactions.filter((t) => {
+      const day = parseInt(t.date.split('-')[2] || '1', 10);
+      return day > 7 && day <= 14;
+    });
+    const w3 = filteredTransactions.filter((t) => {
+      const day = parseInt(t.date.split('-')[2] || '1', 10);
+      return day > 14 && day <= 21;
+    });
+    const w4 = filteredTransactions.filter((t) => {
+      const day = parseInt(t.date.split('-')[2] || '1', 10);
+      return day > 21;
+    });
+
+    const calcWeek = (name: string, txs: typeof filteredTransactions) => {
+      const thu = Math.round(txs.filter((t) => t.type === 'thu').reduce((sum, t) => sum + (Number(t.amount) || 0), 0) / 1000000);
+      const chi = Math.round(txs.filter((t) => t.type === 'chi').reduce((sum, t) => sum + (Number(t.amount) || 0), 0) / 1000000);
+      return { name, Thu: thu, Chi: chi, TonQuy: thu - chi };
+    };
+
     return [
-      { name: 'Tuần 1', Thu: 197.5, Chi: 90.8, TonQuy: 106.7 },
-      { name: 'Tuần 2', Thu: 127.2, Chi: 27.1, TonQuy: 100.1 },
-      { name: 'Tuần 3', Thu: 21.7, Chi: 26.9, TonQuy: -5.2 },
-      { name: 'Tuần 4', Thu: 0, Chi: 39.8, TonQuy: -39.8 },
+      calcWeek('Tuần 1', w1),
+      calcWeek('Tuần 2', w2),
+      calcWeek('Tuần 3', w3),
+      calcWeek('Tuần 4', w4),
     ];
-  }, []);
+  }, [filteredTransactions]);
 
   // Format VND
   const formatMoney = (val: number) => {
