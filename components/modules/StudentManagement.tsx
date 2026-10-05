@@ -25,6 +25,7 @@ interface StudentManagementProps {
   onSaveRecord: (record: StudentRecord) => void;
   onDeleteRecord: (id: string) => void;
   onPrintPreview: () => void;
+  onClearAllSampleData?: () => void;
 }
 
 export default function StudentManagement({
@@ -32,6 +33,7 @@ export default function StudentManagement({
   onSaveRecord,
   onDeleteRecord,
   onPrintPreview,
+  onClearAllSampleData,
 }: StudentManagementProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
@@ -39,6 +41,7 @@ export default function StudentManagement({
   const [modalOpen, setModalOpen] = useState(false);
   const [heatmapOpen, setHeatmapOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<StudentRecord | null>(null);
+  const [deletingStudent, setDeletingStudent] = useState<StudentRecord | null>(null);
 
   const [formState, setFormState] = useState<Partial<StudentRecord>>({
     studentCode: `MN-${new Date().getFullYear()}-00${records.length + 1}`,
@@ -152,10 +155,10 @@ export default function StudentManagement({
             <button
               type="button"
               onClick={() => setHeatmapOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors cursor-pointer border border-emerald-500"
-              title="Xem và chỉnh sửa Heatmap lịch điểm danh, chuyên cần bằng Emoji"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs transition-colors cursor-pointer"
+              title="Xem và chỉnh sửa lịch điểm danh, theo dõi chuyên cần học sinh"
             >
-              <span className="text-sm">😊</span>
+              <CalendarDays className="w-4 h-4" />
               <span>Lịch Điểm Danh (Heatmap)</span>
             </button>
             <button
@@ -172,8 +175,19 @@ export default function StudentManagement({
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-colors cursor-pointer"
             >
               <FileCheck className="w-4 h-4 text-emerald-700" />
-              <span>In danh sách học sinh</span>
+              <span>In danh sách</span>
             </button>
+            {onClearAllSampleData && (
+              <button
+                type="button"
+                onClick={onClearAllSampleData}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer shadow-2xs"
+                title="Xóa toàn bộ data mẫu để tự nhập danh sách học sinh thực tế của trường"
+              >
+                <Trash2 className="w-4 h-4 text-rose-600" />
+                <span>Xóa Data Mẫu</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -326,12 +340,8 @@ export default function StudentManagement({
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (confirm(`Bạn có chắc muốn xóa học sinh "${r.fullName}"?`)) {
-                              onDeleteRecord(r.id);
-                            }
-                          }}
-                          title="Xóa"
+                          onClick={() => setDeletingStudent(r)}
+                          title="Xóa học sinh này"
                           className="p-1.5 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -529,6 +539,57 @@ export default function StudentManagement({
             console.log('Updated attendance for date', dateStr, present, absent);
           }}
         />
+      )}
+
+      {/* Modal Xác Nhận Xóa Học Sinh */}
+      {deletingStudent && (
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-2xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 max-w-md w-full shadow-2xl border border-rose-200 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-2.5 bg-rose-100 rounded-xl">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  Xác Nhận Xóa Học Sinh
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Thao tác này sẽ xóa hồ sơ học sinh khỏi danh sách lớp.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 space-y-1">
+              <div>
+                Họ và tên: <strong className="text-rose-950 font-bold">{deletingStudent.fullName}</strong>
+              </div>
+              <div>
+                Mã định danh: <strong className="font-mono">{deletingStudent.studentCode}</strong> • Lớp: <strong>{deletingStudent.className}</strong>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDeletingStudent(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteRecord(deletingStudent.id);
+                  setDeletingStudent(null);
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Xác nhận Xóa</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

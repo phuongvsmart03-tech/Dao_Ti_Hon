@@ -32,6 +32,7 @@ import {
 
 const STORAGE_KEYS = {
   PIN: 'preschool_auth_pin',
+  PIN_DISABLED: 'preschool_pin_disabled',
   SESSION: 'preschool_auth_session',
   SCHOOL_INFO: 'preschool_school_info',
   STEP1: 'preschool_module_step1',
@@ -49,6 +50,34 @@ const STORAGE_KEYS = {
 };
 
 export const DEFAULT_PIN = '150520';
+
+// Check if PIN requirement is disabled (Single user mode)
+// Defaults to true as requested by user to eliminate PIN entry friction
+export function isPinDisabled(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const val = localStorage.getItem(STORAGE_KEYS.PIN_DISABLED);
+    if (val === null) {
+      localStorage.setItem(STORAGE_KEYS.PIN_DISABLED, 'true');
+      return true;
+    }
+    return val === 'true';
+  } catch {
+    return true;
+  }
+}
+
+export function setPinDisabled(disabled: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEYS.PIN_DISABLED, String(disabled));
+    if (disabled) {
+      sessionStorage.setItem(STORAGE_KEYS.SESSION, 'true');
+    }
+  } catch {
+    // ignore
+  }
+}
 
 export function getStoredPin(): string {
   if (typeof window === 'undefined') return DEFAULT_PIN;
@@ -80,11 +109,12 @@ export function resetPinToDefault(): void {
 }
 
 export function getStoredSession(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined') return true;
   try {
+    if (isPinDisabled()) return true;
     return sessionStorage.getItem(STORAGE_KEYS.SESSION) === 'true';
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -281,6 +311,14 @@ export const moduleStorage = {
     moduleStorage.saveSalaries([]);
     moduleStorage.saveTransactions([]);
   },
+};
+
+export const backupRestore = {
+  getAllSnapshot: () => moduleStorage.getAllSnapshot(),
+  restoreSnapshot: (data: any) => moduleStorage.restoreSnapshot(data),
+  seedAllDefault: () => moduleStorage.seedAllDefault(),
+  clearAllData: () => moduleStorage.clearAllData(),
+  resetAll: () => moduleStorage.resetAll(),
 };
 
 /**

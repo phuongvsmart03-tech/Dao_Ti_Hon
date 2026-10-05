@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Menu as MenuIcon } from 'lucide-react';
 import {
   ModuleId,
   SchoolInfo,
@@ -21,9 +20,12 @@ import {
   savePin,
   getStoredSession,
   setStoredSession,
+  isPinDisabled,
+  setPinDisabled,
   getSchoolInfo,
   saveSchoolInfo,
   moduleStorage,
+  backupRestore,
   exportToCsv,
 } from '@/lib/storage';
 
@@ -57,6 +59,7 @@ import AdministrativeReportModal from '@/components/AdministrativeReportModal';
 import LogoSelectModal from '@/components/LogoSelectModal';
 import TursoSyncModal from '@/components/TursoSyncModal';
 import AiPreschoolModal from '@/components/AiPreschoolModal';
+import { Trash2 } from 'lucide-react';
 
 // Modules
 import LightningModule from '@/components/modules/LightningModule';
@@ -127,6 +130,10 @@ export default function MainPage() {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isTursoConnected, setIsTursoConnected] = useState(false);
   const [currentPin, setCurrentPin] = useState<string>(() => getStoredPin());
+  const [pinDisabled, setPinDisabledState] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return isPinDisabled();
+  });
 
   // School Information state
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>(() => getSchoolInfo());
@@ -145,12 +152,37 @@ export default function MainPage() {
   const [transactionsData, setTransactionsData] = useState<FinanceTransaction[]>(() => moduleStorage.getTransactions());
   const [auditLogs, setAuditLogs] = useState<AuditLogRecord[]>(() => moduleStorage.getAuditLogs());
   const [isSavingCloud, setIsSavingCloud] = useState(false);
+  const [isClearAllDataModalOpen, setIsClearAllDataModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
 
   const showToast = useCallback((text: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 3500);
   }, []);
+
+  // Xóa toàn bộ dữ liệu mẫu để người dùng bắt đầu tự nhập dữ liệu thực tế
+  const handleConfirmClearAllData = useCallback(() => {
+    backupRestore.clearAllData();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('lightning_custom_dishes');
+      localStorage.removeItem('lightning_custom_counts');
+      localStorage.removeItem('preschool_custom_attendance');
+      localStorage.removeItem('preschool_daily_student_statuses');
+    }
+    setStep1Data([]);
+    setStep2Data([]);
+    setStep3Data([]);
+    setMenuData([]);
+    setSamplesData([]);
+    setStudentsData([]);
+    setHealthData([]);
+    setStaffData([]);
+    setLessonsData([]);
+    setSalariesData([]);
+    setTransactionsData([]);
+    setIsClearAllDataModalOpen(false);
+    showToast('Đã xóa sạch toàn bộ data mẫu. Hệ thống sẵn sàng để bạn tự nhập dữ liệu thực tế!', 'success');
+  }, [showToast]);
 
   // Quick Save & Sync to Turso Cloud handler with green success confirmation
   const handleQuickSaveAndSync = async () => {
@@ -538,13 +570,28 @@ export default function MainPage() {
     }
   };
 
-  // Handlers for Authentication
+  // Handlers for Authentication & Single User Mode
   const handleAuthenticated = () => {
     setStoredSession(true);
     setIsAuthenticated(true);
   };
 
+  const handleTogglePinDisabled = (disabled: boolean) => {
+    setPinDisabledState(disabled);
+    setPinDisabled(disabled);
+    if (disabled) {
+      setIsAuthenticated(true);
+      showToast('✨ Đã bật Chế độ 1 người dùng: Đã tắt hoàn toàn mã PIN. Hệ thống luôn sẵn sàng!', 'success');
+    } else {
+      showToast('🔒 Đã bật lại tính năng yêu cầu mã PIN 6 số khi mở phần mềm.', 'info');
+    }
+  };
+
   const handleLock = () => {
+    if (pinDisabled) {
+      showToast('ℹ️ Bạn đang ở Chế độ 1 người dùng (Không dùng PIN). Đã làm mới phiên làm việc!', 'info');
+      return;
+    }
     setStoredSession(false);
     setIsAuthenticated(false);
   };
@@ -1241,65 +1288,55 @@ export default function MainPage() {
 
   // Render Main Application
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-blue-600 selection:text-white">
-      {/* Top Bar Header */}
-      <Header
-        schoolInfo={schoolInfo}
+    <div className="min-h-screen bg-slate-50 flex selection:bg-emerald-600 selection:text-white">
+      {/* 1. Left Navigation Sidebar - Fixed full height */}
+      <Sidebar
         activeModuleId={activeModuleId}
-        activeModuleName={activeModuleConfig.label}
-        onLock={handleLock}
-        onOpenPinModal={() => setIsPinModalOpen(true)}
-        onOpenSchoolModal={() => setIsSchoolModalOpen(true)}
-        onOpenReportModal={() => setIsReportModalOpen(true)}
-        onExportCsv={handleExportCsv}
-        isSidebarCollapsed={isSidebarCollapsed}
-        onToggleSidebar={handleToggleSidebarCollapse}
-        onOpenLogoModal={() => setIsLogoModalOpen(true)}
-        onOpenTursoModal={() => setIsTursoModalOpen(true)}
-        onOpenAiModal={() => setIsAiModalOpen(true)}
-        isTursoConnected={isTursoConnected}
-        onSaveCloud={handleQuickSaveAndSync}
-        isSavingCloud={isSavingCloud}
+        onSelectModule={(id) => setActiveModuleId(id)}
+        counts={countsRecord}
+        isOpenMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={handleToggleSidebarCollapse}
       />
 
-      {/* Mobile Top Sub-Header with Menu button */}
-      <div className="lg:hidden bg-gradient-to-r from-[#133246] to-[#0e3b44] text-white px-4 py-2 flex items-center justify-between border-b border-[#1e4a55] sticky top-16 z-20 shadow-xs">
-        <button
-          type="button"
-          onClick={() => setIsMobileSidebarOpen(true)}
-          className="inline-flex items-center gap-2 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer"
-        >
-          <MenuIcon className="w-4 h-4" />
-          <span>Danh mục 9 Sổ mầm non</span>
-        </button>
-        <span className="text-xs font-semibold text-emerald-200 truncate max-w-[200px]">
-          {activeModuleConfig.label}
-        </span>
-      </div>
-
-      <div className="flex-1 flex w-full">
-        {/* Navigation Sidebar with Preschool Theme & Collapse Functionality */}
-        <Sidebar
+      {/* 2. Main Content Column - Automatically offset by Sidebar width on desktop */}
+      <div
+        className={`flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-300 ease-in-out ${
+          isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72 sm:lg:pl-80'
+        }`}
+      >
+        {/* Top Header Bar - Clean SaaS Glass Bar, Perfectly Aligned */}
+        <Header
+          schoolInfo={schoolInfo}
           activeModuleId={activeModuleId}
-          onSelectModule={(id) => setActiveModuleId(id)}
-          counts={countsRecord}
-          isOpenMobile={isMobileSidebarOpen}
-          onCloseMobile={() => setIsMobileSidebarOpen(false)}
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={handleToggleSidebarCollapse}
+          activeModuleName={activeModuleConfig.label}
+          onLock={handleLock}
+          onOpenPinModal={() => setIsPinModalOpen(true)}
+          onOpenSchoolModal={() => setIsSchoolModalOpen(true)}
+          onOpenReportModal={() => setIsReportModalOpen(true)}
+          onExportCsv={handleExportCsv}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={handleToggleSidebarCollapse}
+          onOpenLogoModal={() => setIsLogoModalOpen(true)}
+          onOpenTursoModal={() => setIsTursoModalOpen(true)}
+          onOpenAiModal={() => setIsAiModalOpen(true)}
+          isTursoConnected={isTursoConnected}
+          onSaveCloud={handleQuickSaveAndSync}
+          isSavingCloud={isSavingCloud}
+          isPinDisabled={pinDisabled}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
+          onClearAllSampleData={() => setIsClearAllDataModalOpen(true)}
         />
 
-        {/* Main Content Area */}
-        <main
-          className={`flex-1 transition-all duration-300 ${
-            isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72 sm:lg:pl-80'
-          } p-3 sm:p-5 lg:p-6 min-w-0`}
-        >
+        {/* Main Workspace Area - Zero Clutter, Cuộn độc lập */}
+        <main className="flex-1 p-3 sm:p-5 lg:p-6 min-w-0">
           {activeModuleId === 'lightning' && (
             <LightningModule
               schoolInfo={schoolInfo}
               menuItems={menuData}
               students={studentsData}
+              onClearAllSampleData={() => setIsClearAllDataModalOpen(true)}
             />
           )}
 
@@ -1380,6 +1417,7 @@ export default function MainPage() {
               onSaveRecord={handleSaveStudents}
               onDeleteRecord={handleDeleteStudents}
               onPrintPreview={() => setIsReportModalOpen(true)}
+              onClearAllSampleData={() => setIsClearAllDataModalOpen(true)}
             />
           )}
 
@@ -1450,6 +1488,8 @@ export default function MainPage() {
         onClose={() => setIsPinModalOpen(false)}
         currentSavedPin={currentPin}
         onUpdatePin={handleUpdatePin}
+        isPinDisabled={pinDisabled}
+        onTogglePinDisabled={handleTogglePinDisabled}
       />
 
       {/* Administrative Report Preview & Print Modal */}
@@ -1561,6 +1601,59 @@ export default function MainPage() {
           });
         }}
       />
+
+      {/* Modal Xác Nhận Xóa Toàn Bộ Data Mẫu */}
+      {isClearAllDataModalOpen && (
+        <div className="fixed inset-0 z-70 bg-black/60 backdrop-blur-2xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-2xl border border-rose-200 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 bg-rose-100 rounded-xl">
+                <Trash2 className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  Xóa Sạch Toàn Bộ Data Mẫu?
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Chuẩn bị dữ liệu trắng để tự nhập dữ liệu thực tế của trường.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 space-y-2">
+              <p className="font-semibold">
+                Toàn bộ dữ liệu mẫu thử nghiệm sau đây sẽ được xóa sạch về 0:
+              </p>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-rose-800">
+                <li>Danh sách học sinh &amp; lịch sử chuyên cần</li>
+                <li>Hồ sơ kiểm thực 3 bước (bước 1, 2, 3 &amp; lưu mẫu)</li>
+                <li>Thực đơn tuần &amp; định lượng mẫu</li>
+                <li>Sổ sức khỏe, nhân sự, giáo án, tài chính</li>
+              </ul>
+              <p className="text-[11px] text-slate-600 pt-1 border-t border-rose-200">
+                Sau khi xóa, bạn có thể tự nhập hồ sơ thực tế hoặc dùng chức năng sao lưu/khôi phục bất cứ lúc nào.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsClearAllDataModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmClearAllData}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm cursor-pointer"
+              >
+                Xác Nhận Xóa Sạch Data Mẫu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Toast Notification */}
       {toastMessage && (

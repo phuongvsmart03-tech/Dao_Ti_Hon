@@ -60,11 +60,11 @@ export default function HistoryAuditTab({
 
   const actionsList = [
     { id: 'all', label: 'Tất cả hành động' },
-    { id: 'create', label: '➕ Thêm mới' },
-    { id: 'update', label: '✏️ Cập nhật / Sửa' },
-    { id: 'delete', label: '🗑️ Xóa bản ghi' },
-    { id: 'restore', label: '↩️ Khôi phục' },
-    { id: 'sync', label: '☁️ Đồng bộ đám mây' },
+    { id: 'create', label: 'Thêm mới' },
+    { id: 'update', label: 'Cập nhật / Sửa' },
+    { id: 'delete', label: 'Xóa bản ghi' },
+    { id: 'restore', label: 'Khôi phục' },
+    { id: 'sync', label: 'Đồng bộ đám mây' },
   ];
 
   const filteredLogs = useMemo(() => {

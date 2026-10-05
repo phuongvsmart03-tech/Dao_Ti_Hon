@@ -31,7 +31,6 @@ export interface ModuleItemConfig {
   label: string;
   subLabel: string;
   icon: React.ComponentType<{ className?: string }>;
-  stepBadge?: string;
   category: 'vsattp' | 'education' | 'management';
   accentColor: {
     bg: string;
@@ -48,7 +47,6 @@ export const MODULE_ITEMS: ModuleItemConfig[] = [
     label: 'Trích xuất hồ sơ',
     subLabel: 'Kiểm thực 3 bước & quyết toán tiền ăn',
     icon: FileCheck,
-    stepBadge: 'TRỌNG TÂM',
     category: 'vsattp',
     accentColor: {
       bg: 'bg-amber-500/20',
@@ -63,7 +61,6 @@ export const MODULE_ITEMS: ModuleItemConfig[] = [
     label: 'Thu Chi & Tính Lương',
     subLabel: 'Lương giáo viên, dòng tiền & biểu đồ',
     icon: DollarSign,
-    stepBadge: 'TÀI CHÍNH',
     category: 'management',
     accentColor: {
       bg: 'bg-emerald-500/20',
@@ -148,7 +145,6 @@ export const MODULE_ITEMS: ModuleItemConfig[] = [
     label: 'Lịch sử thao tác',
     subLabel: 'Nhật ký thêm, sửa, xóa & khôi phục',
     icon: History,
-    stepBadge: 'HOÀN TÁC',
     category: 'management',
     accentColor: {
       bg: 'bg-violet-500/10',
@@ -205,36 +201,25 @@ export default function Sidebar({
 
       {/* Main Preschool Themed Sidebar */}
       <aside
-        className={`fixed top-16 bottom-0 left-0 z-40 bg-gradient-to-b from-[#133246] via-[#0e3b44] to-[#0a2e36] text-white flex flex-col border-r border-[#1e4a55] shadow-xl transition-all duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-40 h-screen bg-gradient-to-b from-[#133246] via-[#0e3b44] to-[#0a2e36] text-white flex flex-col border-r border-[#1e4a55] shadow-xl transition-all duration-300 ease-in-out lg:translate-x-0 ${
           isOpenMobile ? 'translate-x-0 w-72 sm:w-80 shadow-2xl' : '-translate-x-full'
         } ${isCollapsed ? 'lg:w-20' : 'lg:w-72 sm:lg:w-80'}`}
       >
-        {/* Top Header inside Sidebar with Preschool Vibe */}
+        {/* Top Header inside Sidebar with Preschool Vibe - Height matches Header (h-16) */}
         <div
-          className={`border-b border-[#1e4a55] bg-[#0c2738]/80 backdrop-blur-xs flex items-center transition-all duration-300 ${
-            isCollapsed ? 'p-3 flex-col justify-center gap-2' : 'px-4 py-3.5 justify-between'
+          className={`h-16 shrink-0 border-b border-[#1e4a55] bg-[#0c2738]/90 backdrop-blur-xs flex items-center transition-all duration-300 ${
+            isCollapsed ? 'justify-center px-2' : 'px-4 justify-between'
           }`}
         >
           {isCollapsed ? (
-            <div className="flex flex-col items-center gap-1.5 w-full">
+            <div className="flex items-center justify-center">
               <div
-                className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 to-amber-300 text-amber-950 flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform"
+                className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 to-amber-300 text-amber-950 flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform"
                 onClick={onToggleCollapse}
                 title="Bung rộng thanh điều hướng"
               >
                 <Sun className="w-5 h-5 text-amber-900 animate-spin-slow" />
               </div>
-
-              {onToggleCollapse && (
-                <button
-                  type="button"
-                  onClick={onToggleCollapse}
-                  title="Bung rộng thanh bên"
-                  className="p-1.5 rounded-lg text-emerald-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
             </div>
           ) : (
             <>
@@ -316,11 +301,6 @@ export default function Sidebar({
                         <span className="font-bold text-xs text-amber-300">
                           {index + 1}. {item.label}
                         </span>
-                        {item.stepBadge && (
-                          <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-amber-400 text-amber-950">
-                            {item.stepBadge}
-                          </span>
-                        )}
                       </div>
                       <p className="text-[11px] text-emerald-100/70">{item.subLabel}</p>
                       <div className="mt-1.5 pt-1.5 border-t border-white/10 flex items-center justify-between text-[10px] text-emerald-300">
@@ -367,11 +347,6 @@ export default function Sidebar({
                     <span className="font-bold text-sm leading-tight truncate">
                       {index + 1}. {item.label}
                     </span>
-                    {item.stepBadge && (
-                      <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-amber-400 text-amber-950 shrink-0 shadow-2xs">
-                        {item.stepBadge}
-                      </span>
-                    )}
                   </div>
                   <p
                     className={`text-xs mt-0.5 line-clamp-1 leading-relaxed ${

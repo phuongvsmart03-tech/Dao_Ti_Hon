@@ -33,17 +33,21 @@ import {
   Soup,
   CakeSlice,
   Filter,
+  UserCheck,
+  Trash2,
 } from 'lucide-react';
 import { SchoolInfo, MenuItem, StudentRecord, DishItem } from '@/types/preschool';
 import { InspectionPrintRecord } from '@/types/lightning';
 import { getStandardizedIngredientsForDish } from '@/lib/dish-database';
 import OfficialPrintView from '@/components/OfficialPrintView';
 import { getStoredDishLibrary } from '@/lib/dish-library';
+import DailyAttendanceModal from '@/components/DailyAttendanceModal';
 
 interface LightningModuleProps {
   schoolInfo: SchoolInfo;
   menuItems: MenuItem[];
   students: StudentRecord[];
+  onClearAllSampleData?: () => void;
 }
 
 // Danh sách gợi ý Combo trưa từ 30 món chốt của cơ sở
@@ -58,19 +62,78 @@ const LUNCH_COMBO_SUGGESTIONS = [
   { main: 'Trứng chiên rau củ', soup: 'Canh cải thịt bằm' },
 ];
 
+// Helper chuyển đổi Date sang chuỗi YYYY-MM-DD theo giờ địa phương (tránh lệch timezone)
+const toLocalDateString = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+// Helper parse chuỗi YYYY-MM-DD an toàn
+const parseLocalDate = (str: string): Date => {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
+// Helper tìm Thứ Hai đầu tuần
+const getMondayOfWeek = (d: Date): Date => {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // 1: Thứ 2, 0: Chủ Nhật
+  date.setDate(date.getDate() + diff);
+  return date;
+};
+
+// Helper lấy thông tin thứ trong tuần
+export const getDayInfo = (dateStr: string) => {
+  const d = parseLocalDate(dateStr);
+  const day = d.getDay();
+  switch (day) {
+    case 0:
+      return { label: 'Chủ Nhật', shortLabel: 'CN', isWeekend: true, badgeClass: 'bg-rose-100 text-rose-800 border-rose-300' };
+    case 1:
+      return { label: 'Thứ Hai', shortLabel: 'T2', isWeekend: false, badgeClass: 'bg-slate-100 text-slate-700 border-slate-200' };
+    case 2:
+      return { label: 'Thứ Ba', shortLabel: 'T3', isWeekend: false, badgeClass: 'bg-slate-100 text-slate-700 border-slate-200' };
+    case 3:
+      return { label: 'Thứ Tư', shortLabel: 'T4', isWeekend: false, badgeClass: 'bg-slate-100 text-slate-700 border-slate-200' };
+    case 4:
+      return { label: 'Thứ Năm', shortLabel: 'T5', isWeekend: false, badgeClass: 'bg-slate-100 text-slate-700 border-slate-200' };
+    case 5:
+      return { label: 'Thứ Sáu', shortLabel: 'T6', isWeekend: false, badgeClass: 'bg-slate-100 text-slate-700 border-slate-200' };
+    case 6:
+      return { label: 'Thứ Bảy', shortLabel: 'T7', isWeekend: true, badgeClass: 'bg-amber-100 text-amber-900 border-amber-300' };
+    default:
+      return { label: '', shortLabel: '', isWeekend: false, badgeClass: '' };
+  }
+};
+
 export default function LightningModule({
   schoolInfo,
   menuItems,
   students,
+  onClearAllSampleData,
 }: LightningModuleProps) {
   // 1. Inputs cho phân hệ Tia Chớp
-  const [startDate, setStartDate] = useState<string>(() => {
+  const [dateMode, setDateMode] = useState<'range' | 'week' | 'month'>('range');
+  const [includeSaturday, setIncludeSaturday] = useState<boolean>(false);
+  const [includeSunday, setIncludeSunday] = useState<boolean>(false);
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  const [selectedWeekDate, setSelectedWeekDate] = useState<string>(() => {
+    return toLocalDateString(new Date());
+  });
+
+  const [startDate, setStartDate] = useState<string>(() => {
+    return toLocalDateString(new Date());
   });
   const [endDate, setEndDate] = useState<string>(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+    return toLocalDateString(new Date());
   });
 
   // Số lượng bé & tiền ăn mặc định
@@ -128,20 +191,45 @@ export default function LightningModule({
   const [modalCategoryFilter, setModalCategoryFilter] = useState<string>('all');
   const [customInputDish, setCustomInputDish] = useState('');
 
-  // Tạo danh sách các ngày trong khoảng thời gian (loại bỏ Thứ 7, CN)
+  // Modal Kiểm Soát Điểm Danh & Sửa Danh Sách Theo Ngày
+  const [dailyAttendanceModalOpen, setDailyAttendanceModalOpen] = useState(false);
+  const [dailyAttendanceModalDate, setDailyAttendanceModalDate] = useState<string>(() => {
+    return toLocalDateString(new Date());
+  });
+
+  // Hộp thoại xác nhận Xóa Trắng (Ngày / Tuần / Tháng)
+  const [clearConfirmDialog, setClearConfirmDialog] = useState<{
+    type: 'day' | 'week' | 'month';
+    targetDate: string;
+  } | null>(null);
+
+  // Dropdown mở menu xóa trắng trên thanh công cụ
+  const [isClearMenuOpen, setIsClearMenuOpen] = useState(false);
+
+  // Tạo danh sách các ngày trong khoảng thời gian (loại bỏ hoặc bao gồm Thứ 7, CN)
   const dateList = useMemo(() => {
     const dates: string[] = [];
     try {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      if (!startDate || !endDate) return [];
+      const start = parseLocalDate(startDate);
+      const end = parseLocalDate(endDate);
       if (start > end) return [startDate];
 
-      let curr = new Date(start);
-      while (curr <= end && dates.length < 31) {
-        // Chỉ lấy từ Thứ 2 đến Thứ 6
-        const day = curr.getDay();
-        if (day !== 0 && day !== 6) {
-          dates.push(curr.toISOString().split('T')[0]);
+      const curr = new Date(start);
+      // Hỗ trợ tối đa 62 ngày (đầy đủ 2 tháng) mượt mà
+      while (curr <= end && dates.length < 62) {
+        const day = curr.getDay(); // 0: CN, 1: T2, ..., 6: T7
+        let isIncluded = false;
+        if (day >= 1 && day <= 5) {
+          isIncluded = true; // Thứ 2 đến Thứ 6
+        } else if (day === 6 && includeSaturday) {
+          isIncluded = true; // Thứ 7 nếu bật
+        } else if (day === 0 && includeSunday) {
+          isIncluded = true; // Chủ Nhật nếu bật
+        }
+
+        if (isIncluded) {
+          dates.push(toLocalDateString(curr));
         }
         curr.setDate(curr.getDate() + 1);
       }
@@ -149,7 +237,86 @@ export default function LightningModule({
     } catch {
       return [startDate];
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, includeSaturday, includeSunday]);
+
+  // Hàm chọn khoảng tuần
+  const handleSelectWeek = (referenceDateStr: string, incSat = includeSaturday, incSun = includeSunday) => {
+    setSelectedWeekDate(referenceDateStr);
+    const ref = parseLocalDate(referenceDateStr);
+    const monday = getMondayOfWeek(ref);
+    const endDays = incSun ? 6 : incSat ? 5 : 4;
+    const endDay = new Date(monday);
+    endDay.setDate(monday.getDate() + endDays);
+
+    setStartDate(toLocalDateString(monday));
+    setEndDate(toLocalDateString(endDay));
+  };
+
+  // Hàm chọn cả tháng
+  const handleSelectMonth = (yearMonthStr: string) => {
+    setSelectedMonth(yearMonthStr);
+    const [y, m] = yearMonthStr.split('-').map(Number);
+    const start = new Date(y, m - 1, 1);
+    // Ngày cuối cùng của tháng: ngày 0 của tháng tiếp theo
+    const end = new Date(y, m, 0);
+
+    setStartDate(toLocalDateString(start));
+    setEndDate(toLocalDateString(end));
+  };
+
+  // Thao tác tuần nhanh
+  const handleQuickCurrentWeek = () => {
+    handleSelectWeek(toLocalDateString(new Date()));
+  };
+
+  const handleQuickPrevWeek = () => {
+    const ref = parseLocalDate(selectedWeekDate || startDate);
+    ref.setDate(ref.getDate() - 7);
+    handleSelectWeek(toLocalDateString(ref));
+  };
+
+  const handleQuickNextWeek = () => {
+    const ref = parseLocalDate(selectedWeekDate || startDate);
+    ref.setDate(ref.getDate() + 7);
+    handleSelectWeek(toLocalDateString(ref));
+  };
+
+  // Thao tác tháng nhanh
+  const handleQuickCurrentMonth = () => {
+    const today = new Date();
+    const ym = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    handleSelectMonth(ym);
+  };
+
+  const handleQuickPrevMonth = () => {
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const prev = new Date(y, m - 2, 1);
+    const ym = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    handleSelectMonth(ym);
+  };
+
+  const handleQuickNextMonth = () => {
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const next = new Date(y, m, 1);
+    const ym = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+    handleSelectMonth(ym);
+  };
+
+  // Bật/tắt Thứ 7
+  const handleToggleSaturday = (checked: boolean) => {
+    setIncludeSaturday(checked);
+    if (dateMode === 'week') {
+      handleSelectWeek(selectedWeekDate, checked, includeSunday);
+    }
+  };
+
+  // Bật/tắt Chủ Nhật
+  const handleToggleSunday = (checked: boolean) => {
+    setIncludeSunday(checked);
+    if (dateMode === 'week') {
+      handleSelectWeek(selectedWeekDate, includeSaturday, checked);
+    }
+  };
 
   // Cập nhật số suất ăn trực tiếp cho 1 ngày
   const handleUpdateCount = (
@@ -244,6 +411,68 @@ export default function LightningModule({
       delete nextState[dateStr];
       return nextState;
     });
+  };
+
+  // Xóa trắng theo ngày (đặt suất NT & MG về 0)
+  const handleClearDate = (dateStr: string) => {
+    setCustomCountsByDate((prev) => ({
+      ...prev,
+      [dateStr]: { nurseryCount: 0, kindergartenCount: 0 },
+    }));
+  };
+
+  // Xóa trắng theo tuần (đặt suất NT & MG của tất cả các ngày trong tuần này về 0)
+  const handleClearWeek = (referenceDateStr: string) => {
+    const ref = parseLocalDate(referenceDateStr);
+    const monday = getMondayOfWeek(ref);
+    const weekDates: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      weekDates.push(toLocalDateString(d));
+    }
+    setCustomCountsByDate((prev) => {
+      const next = { ...prev };
+      weekDates.forEach((d) => {
+        next[d] = { nurseryCount: 0, kindergartenCount: 0 };
+      });
+      return next;
+    });
+  };
+
+  // Xóa trắng theo tháng (đặt suất NT & MG của tất cả các ngày trong tháng về 0)
+  const handleClearMonth = (referenceDateStr: string) => {
+    const [y, m] = referenceDateStr.split('-').map(Number);
+    const totalDays = new Date(y, m, 0).getDate();
+    setCustomCountsByDate((prev) => {
+      const next = { ...prev };
+      for (let day = 1; day <= totalDays; day++) {
+        const dStr = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        next[dStr] = { nurseryCount: 0, kindergartenCount: 0 };
+      }
+      return next;
+    });
+  };
+
+  // Mở modal kiểm soát điểm danh cho 1 ngày bất kỳ
+  const handleOpenAttendanceForDate = (dateStr: string) => {
+    setDailyAttendanceModalDate(dateStr);
+    setDailyAttendanceModalOpen(true);
+  };
+
+  // Lưu điểm danh chi tiết từ DailyAttendanceModal
+  const handleSaveDailyAttendance = (
+    dateStr: string,
+    nurseryCountVal: number,
+    kindergartenCountVal: number
+  ) => {
+    setCustomCountsByDate((prev) => ({
+      ...prev,
+      [dateStr]: {
+        nurseryCount: nurseryCountVal,
+        kindergartenCount: kindergartenCountVal,
+      },
+    }));
   };
 
   // Bộ sinh hồ sơ tự động từ Menu (kết hợp tùy chỉnh món & suất ăn từng ngày)
@@ -463,75 +692,216 @@ export default function LightningModule({
 
       {/* Control Dashboard: 3 Cột cấu hình nhanh */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-        {/* Cột 1: Chọn khoảng thời gian & Chọn nhanh */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+        {/* Cột 1: Chọn khoảng thời gian & Chọn nhanh (Khoảng ngày / Theo Tuần / Cả Tháng) */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-3.5">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2.5">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
                 <Calendar className="w-4 h-4 text-amber-600" />
                 <span>1. Khoảng Thời Gian Hồ Sơ</span>
               </div>
             </div>
 
-            {/* Quick date presets */}
-            <div className="flex items-center gap-1.5 mb-3">
+            {/* 3 Chế Độ Chọn: Khoảng Ngày | Theo Tuần | Cả Tháng */}
+            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl mb-3 border border-slate-200/80">
               <button
                 type="button"
-                onClick={() => {
-                  setStartDate('2025-05-12');
-                  setEndDate('2025-05-16');
-                }}
-                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-md text-[11px] font-semibold transition-colors border border-amber-200 cursor-pointer"
+                onClick={() => setDateMode('range')}
+                className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  dateMode === 'range'
+                    ? 'bg-white text-amber-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
               >
-                Tuần 1 (12-16/5)
+                Khoảng ngày
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  setStartDate('2025-05-19');
-                  setEndDate('2025-05-23');
+                  setDateMode('week');
+                  handleSelectWeek(selectedWeekDate || startDate);
                 }}
-                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-md text-[11px] font-semibold transition-colors border border-amber-200 cursor-pointer"
+                className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  dateMode === 'week'
+                    ? 'bg-white text-amber-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
               >
-                Tuần 2 (19-23/5)
+                Theo tuần
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  setStartDate('2025-05-01');
-                  setEndDate('2025-05-31');
+                  setDateMode('month');
+                  handleSelectMonth(selectedMonth);
                 }}
-                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-md text-[11px] font-semibold transition-colors border border-amber-200 cursor-pointer"
+                className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  dateMode === 'month'
+                    ? 'bg-white text-amber-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
               >
-                Cả tháng 5
+                Cả tháng
               </button>
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Từ ngày:</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-amber-500 bg-slate-50"
-                />
+            {/* UI theo chế độ đang chọn */}
+            {dateMode === 'range' && (
+              <div className="space-y-2 mb-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Từ ngày:</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Đến ngày:</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Đến ngày:</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-amber-500 bg-slate-50"
-                />
+            )}
+
+            {dateMode === 'week' && (
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleQuickPrevWeek}
+                    className="flex-1 py-1 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold transition-colors border border-slate-200 cursor-pointer"
+                  >
+                    ◀ Tuần trước
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleQuickCurrentWeek}
+                    className="flex-1 py-1 px-2 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-md text-[11px] font-bold transition-colors border border-amber-300 cursor-pointer"
+                  >
+                    Tuần này
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleQuickNextWeek}
+                    className="flex-1 py-1 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold transition-colors border border-slate-200 cursor-pointer"
+                  >
+                    Tuần sau ▶
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Chọn ngày trong tuần muốn trích xuất:
+                  </label>
+                  <input
+                    type="date"
+                    value={selectedWeekDate}
+                    onChange={(e) => handleSelectWeek(e.target.value)}
+                    className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+                  />
+                </div>
+              </div>
+            )}
+
+            {dateMode === 'month' && (
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleQuickPrevMonth}
+                    className="flex-1 py-1 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold transition-colors border border-slate-200 cursor-pointer"
+                  >
+                    ◀ Tháng trước
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleQuickCurrentMonth}
+                    className="flex-1 py-1 px-2 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-md text-[11px] font-bold transition-colors border border-amber-300 cursor-pointer"
+                  >
+                    Tháng này
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleQuickNextMonth}
+                    className="flex-1 py-1 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold transition-colors border border-slate-200 cursor-pointer"
+                  >
+                    Tháng sau ▶
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Chọn tháng cần trích xuất sổ sách:
+                  </label>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => handleSelectMonth(e.target.value)}
+                    className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Tùy chọn Ngày học trong tuần: Thứ 7 & Chủ Nhật */}
+            <div className="pt-2 border-t border-slate-100 space-y-1.5">
+              <span className="text-[11px] font-bold text-slate-700 block">Ngày học trong tuần:</span>
+              <div className="flex items-center gap-2">
+                <label className={`flex-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                  includeSaturday
+                    ? 'bg-amber-50 border-amber-300 text-amber-900'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={includeSaturday}
+                    onChange={(e) => handleToggleSaturday(e.target.checked)}
+                    className="rounded text-amber-600 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer"
+                  />
+                  <span>Học Thứ 7 (Bán trú T7)</span>
+                </label>
+
+                <label className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                  includeSunday
+                    ? 'bg-rose-50 border-rose-300 text-rose-900'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={includeSunday}
+                    onChange={(e) => handleToggleSunday(e.target.checked)}
+                    className="rounded text-rose-600 focus:ring-rose-500 w-3.5 h-3.5 cursor-pointer"
+                  />
+                  <span>Chủ Nhật</span>
+                </label>
               </div>
             </div>
           </div>
 
-          <div className="p-2.5 rounded-lg bg-amber-50/80 border border-amber-200 text-xs text-amber-900 flex items-center justify-between">
-            <span>Số ngày lập hồ sơ hợp lệ:</span>
-            <strong className="font-bold text-sm text-amber-900">{dateList.length} ngày (T2-T6)</strong>
+          {/* Hộp tóm tắt số ngày đã lọc */}
+          <div className="p-2.5 rounded-lg bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-950 flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600 font-medium">Hồ sơ được xác định:</span>
+              <strong className="font-extrabold text-sm text-emerald-900">
+                {dateList.length} ngày
+              </strong>
+            </div>
+            <div className="text-[10.5px] text-emerald-800 flex items-center justify-between">
+              <span>
+                {includeSunday
+                  ? 'Gồm cả Thứ 7 & Chủ Nhật'
+                  : includeSaturday
+                  ? 'Gồm Thứ 2 đến Thứ 7'
+                  : 'Chỉ Thứ 2 đến Thứ 6'}
+              </span>
+              <span className="font-mono text-slate-500">{startDate} ➔ {endDate}</span>
+            </div>
           </div>
         </div>
 
@@ -638,7 +1008,7 @@ export default function LightningModule({
               onChange={(e) => setSelectedTemplate(e.target.value as any)}
               className="w-full text-xs font-medium border border-slate-300 rounded-lg px-3 py-2.5 bg-slate-50 focus:ring-2 focus:ring-amber-500 cursor-pointer"
             >
-              <option value="all">★ Trọn Bộ Đầy Đủ 6 Biểu Mẫu (Chuẩn PDF GD&amp;ĐT)</option>
+              <option value="all">Trọn Bộ Đầy Đủ 6 Biểu Mẫu (Chuẩn PDF GD&amp;ĐT)</option>
               <option value="menu_ration">Trang 1: Bảng Tính Khẩu Phần Ăn Hàng Ngày</option>
               <option value="step1_raw">Trang 2: Kiểm thực Bước 1 (Tươi sống, Đông lạnh)</option>
               <option value="step1_dry">Trang 3: Kiểm thực Bước 1 (Đồ khô, Phụ gia)</option>
@@ -661,38 +1031,142 @@ export default function LightningModule({
 
       {/* Preview Card List & Table */}
       <div className="w-full bg-white rounded-xl border border-slate-200 p-4 sm:p-6 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+            <ShieldCheck className="w-6 h-6 text-emerald-700 shrink-0" />
             <div>
-              <h3 className="font-bold text-slate-800 text-base">
-                Bảng Tổng Hợp Dữ Liệu Hồ Sơ Kiểm Thực
+              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                <span>Bảng Tổng Hợp Dữ Liệu Hồ Sơ Kiểm Thực &amp; Điểm Danh</span>
+                <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  {dateList.length} ngày hồ sơ
+                </span>
               </h3>
               <p className="text-xs text-slate-500 font-medium">
-                Thực đơn chia rõ 3 bữa <strong className="text-amber-700">Sáng • Trưa • Chiều</strong>. Nhấp vào bữa để mở bảng chọn toàn bộ món ăn.
+                Thực đơn chia rõ 3 bữa. Chọn bất kỳ ngày nào để kiểm soát &amp; sửa danh sách điểm danh, hỗ trợ xóa trắng theo Ngày, Tuần, Tháng.
               </p>
             </div>
           </div>
-          {(Object.keys(customDishesByDate).length > 0 || Object.keys(customCountsByDate).length > 0) && (
+
+          <div className="flex items-center gap-2 flex-wrap self-start lg:self-auto">
+            {/* Nút Vào Kiểm Soát Điểm Danh Cho 1 Ngày Bất Kỳ */}
             <button
               type="button"
               onClick={() => {
-                setCustomDishesByDate({});
-                setCustomCountsByDate({});
+                setDailyAttendanceModalDate(startDate || toLocalDateString(new Date()));
+                setDailyAttendanceModalOpen(true);
               }}
-              className="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1 self-start sm:self-auto px-2.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200 cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+              title="Vào trường kiểm soát điểm danh cho ngày bất kỳ"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Khôi phục tất cả về mặc định</span>
+              <UserCheck className="w-4 h-4" />
+              <span>Kiểm Soát Điểm Danh (Ngày Bất Kỳ)</span>
             </button>
-          )}
+
+            {/* Nút Xóa Toàn Bộ Data Mẫu */}
+            {onClearAllSampleData && (
+              <button
+                type="button"
+                onClick={onClearAllSampleData}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+                title="Xóa toàn bộ data mẫu để tự nhập dữ liệu thực tế của trường"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                <span>Xóa Data Mẫu</span>
+              </button>
+            )}
+
+            {/* Menu Dropdown Xóa Trắng Theo Ngày, Tuần, Tháng */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsClearMenuOpen((v) => !v)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold text-xs shadow-2xs transition-colors cursor-pointer"
+                title="Tùy chọn xóa trắng số suất ăn theo Ngày, Tuần, Tháng"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-slate-600" />
+                <span>Xóa Trắng</span>
+                <ChevronDown className="w-3 h-3 text-slate-600" />
+              </button>
+
+              {isClearMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setIsClearMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs animate-in fade-in duration-100">
+                    <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                      Tùy chọn Xóa Trắng Suất Ăn
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsClearMenuOpen(false);
+                        setClearConfirmDialog({
+                          type: 'day',
+                          targetDate: startDate || toLocalDateString(new Date()),
+                        });
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-rose-50 text-rose-700 font-semibold flex items-center justify-between cursor-pointer"
+                    >
+                      <span>Xóa trắng Ngày ({startDate})</span>
+                      <span className="text-[10px] text-rose-500 font-bold">về 0 suất</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsClearMenuOpen(false);
+                        setClearConfirmDialog({
+                          type: 'week',
+                          targetDate: startDate || toLocalDateString(new Date()),
+                        });
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-rose-50 text-rose-700 font-semibold flex items-center justify-between cursor-pointer"
+                    >
+                      <span>Xóa trắng Theo Tuần</span>
+                      <span className="text-[10px] text-rose-500 font-bold">7 ngày</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsClearMenuOpen(false);
+                        setClearConfirmDialog({
+                          type: 'month',
+                          targetDate: selectedMonth || startDate,
+                        });
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-rose-50 text-rose-700 font-semibold flex items-center justify-between cursor-pointer border-t border-slate-100"
+                    >
+                      <span>Xóa trắng Cả Tháng</span>
+                      <span className="text-[10px] text-rose-500 font-bold">toàn tháng</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {(Object.keys(customDishesByDate).length > 0 || Object.keys(customCountsByDate).length > 0) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomDishesByDate({});
+                  setCustomCountsByDate({});
+                }}
+                className="text-xs font-semibold text-slate-600 hover:text-slate-800 flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 cursor-pointer transition-colors"
+                title="Khôi phục toàn bộ về mặc định ban đầu"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Khôi phục mặc định</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="overflow-x-auto w-full">
+        <div className="overflow-x-auto w-full max-h-[640px] overflow-y-auto custom-scrollbar rounded-xl border border-slate-200">
           <table className="w-full text-xs text-left text-slate-600 border-collapse">
-            <thead className="bg-slate-50 text-slate-700 font-bold uppercase text-[11px] border-b border-slate-200">
+            <thead className="bg-slate-100/95 backdrop-blur-xs text-slate-700 font-bold uppercase text-[11px] border-b border-slate-200 sticky top-0 z-10 shadow-2xs">
               <tr>
-                <th className="p-2.5 sm:p-3 whitespace-nowrap">Ngày</th>
+                <th className="p-2.5 sm:p-3 whitespace-nowrap">Ngày &amp; Điểm Danh</th>
                 <th className="p-2.5 sm:p-3 min-w-[340px] lg:min-w-[420px]">
                   THỰC ĐƠN (SÁNG • TRƯA • CHIỀU)
                 </th>
@@ -720,13 +1194,21 @@ export default function LightningModule({
                 const dateStr = item.date;
                 const isCustomDish = !!customDishesByDate[dateStr];
                 const isCustomCount = !!customCountsByDate[dateStr];
+                const dayInfo = getDayInfo(dateStr);
+                const isCleared = item.nurseryCount === 0 && item.kindergartenCount === 0;
 
                 return (
-                  <tr key={dateStr} className="hover:bg-amber-50/30 transition-colors align-top">
+                  <tr key={dateStr} className={`hover:bg-amber-50/30 transition-colors align-top ${
+                    dayInfo.isWeekend ? 'bg-amber-50/15' : ''
+                  }`}>
                     <td className="p-2.5 sm:p-3 font-bold text-slate-900 whitespace-nowrap pt-3.5">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                        <span>{new Date(dateStr).toLocaleDateString('vi-VN')}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded border ${dayInfo.badgeClass}`}>
+                          {dayInfo.label}
+                        </span>
+                        <span className="font-mono text-slate-800 text-xs font-bold">
+                          {new Date(dateStr + 'T00:00:00').toLocaleDateString('vi-VN')}
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {isCustomDish && (
@@ -734,11 +1216,38 @@ export default function LightningModule({
                             Đã đổi món
                           </span>
                         )}
-                        {isCustomCount && (
+                        {isCustomCount && !isCleared && (
                           <span className="px-1.5 py-0.5 rounded text-[9.5px] bg-blue-500 text-white font-semibold">
                             Đã đổi sĩ số
                           </span>
                         )}
+                        {isCleared && (
+                          <span className="px-1.5 py-0.5 rounded text-[9.5px] bg-rose-600 text-white font-bold">
+                            Đã xóa trắng (0 suất)
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Nút hành động nhanh trên từng ngày - chỉ biểu tượng sửa và xóa, không ghi chữ */}
+                      <div className="flex items-center gap-1 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAttendanceForDate(dateStr)}
+                          className="p-1 rounded bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 border border-slate-200 transition-colors cursor-pointer"
+                          title="Sửa danh sách điểm danh ngày này"
+                          aria-label="Sửa"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleClearDate(dateStr)}
+                          className="p-1 rounded bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 border border-slate-200 transition-colors cursor-pointer"
+                          title="Xóa trắng suất ăn ngày này về 0"
+                          aria-label="Xóa"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
 
@@ -1263,6 +1772,104 @@ export default function LightningModule({
           onClose={() => setIsPrintModalOpen(false)}
           selectedTemplate={selectedTemplate}
         />
+      )}
+
+      {/* Modal Kiểm Soát & Sửa Danh Sách Điểm Danh Từng Ngày Bất Kỳ */}
+      {dailyAttendanceModalOpen && (
+        <DailyAttendanceModal
+          isOpen={dailyAttendanceModalOpen}
+          initialDate={dailyAttendanceModalDate}
+          availableDates={dateList}
+          students={students}
+          nurseryPrice={nurseryPrice}
+          kindergartenPrice={kindergartenPrice}
+          defaultNurseryCount={nurseryCount}
+          defaultKindergartenCount={kindergartenCount}
+          customCountsByDate={customCountsByDate}
+          onClose={() => setDailyAttendanceModalOpen(false)}
+          onSaveAttendance={handleSaveDailyAttendance}
+          onClearDate={handleClearDate}
+          onClearWeek={handleClearWeek}
+          onClearMonth={handleClearMonth}
+          onResetDate={handleResetDate}
+        />
+      )}
+
+      {/* Modal Xác Nhận Xóa Trắng (Từ thanh công cụ) */}
+      {clearConfirmDialog && (
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-2xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 max-w-md w-full shadow-2xl border border-rose-200 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-2.5 bg-rose-100 rounded-xl">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  Xác Nhận Xóa Trắng{' '}
+                  {clearConfirmDialog.type === 'day'
+                    ? `Theo Ngày (${clearConfirmDialog.targetDate})`
+                    : clearConfirmDialog.type === 'week'
+                    ? 'Toàn Bộ Tuần'
+                    : 'Toàn Bộ Tháng'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Thao tác này sẽ đặt sĩ số suất ăn về 0 cho phạm vi đã chọn.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+              <p>
+                <strong>Phạm vi xóa trắng:</strong>{' '}
+                {clearConfirmDialog.type === 'day' && (
+                  <span>
+                    Chỉ riêng ngày <strong>{clearConfirmDialog.targetDate}</strong>.
+                  </span>
+                )}
+                {clearConfirmDialog.type === 'week' && (
+                  <span>
+                    Toàn bộ các ngày trong <strong>tuần</strong> chứa ngày {clearConfirmDialog.targetDate}.
+                  </span>
+                )}
+                {clearConfirmDialog.type === 'month' && (
+                  <span>
+                    Toàn bộ các ngày trong <strong>tháng</strong> chứa ngày {clearConfirmDialog.targetDate}.
+                  </span>
+                )}
+              </p>
+              <p className="text-[11px] text-amber-700">
+                💡 Dữ liệu thực đơn vẫn được giữ nguyên. Bạn có thể bấm <strong>&quot;Khôi phục mặc định&quot;</strong> bất cứ lúc nào.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setClearConfirmDialog(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (clearConfirmDialog.type === 'day') {
+                    handleClearDate(clearConfirmDialog.targetDate);
+                  } else if (clearConfirmDialog.type === 'week') {
+                    handleClearWeek(clearConfirmDialog.targetDate);
+                  } else if (clearConfirmDialog.type === 'month') {
+                    handleClearMonth(clearConfirmDialog.targetDate);
+                  }
+                  setClearConfirmDialog(null);
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Xác nhận Xóa Trắng</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

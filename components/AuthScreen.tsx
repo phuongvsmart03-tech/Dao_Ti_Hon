@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Lock, KeyRound, School, Sparkles, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
-import { DEFAULT_PIN, getStoredPin } from '@/lib/storage';
+import { Lock, KeyRound, School, Sparkles, AlertCircle, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
+import { DEFAULT_PIN, getStoredPin, setPinDisabled } from '@/lib/storage';
 import { SchoolInfo } from '@/types/preschool';
 import { PRESET_LOGOS } from './LogoSelectModal';
 
@@ -216,20 +216,34 @@ export default function AuthScreen({
         </div>
 
         {/* Unlock Button */}
-        <button
-          type="button"
-          onClick={() => verifyPin(pin)}
-          disabled={pin.length !== 6}
-          className={`w-full py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-md ${
-            pin.length === 6
-              ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:shadow-lg'
-              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-          }`}
-        >
-          <Lock className="w-4 h-4" />
-          <span>Mở khóa vào Bảng điều khiển</span>
-          <ArrowRight className="w-4 h-4 ml-1" />
-        </button>
+        <div className="space-y-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              setPinDisabled(true);
+              handleCallbackSuccess();
+            }}
+            className="w-full py-3 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
+          >
+            <UserCheck className="w-4 h-4 text-emerald-200" />
+            <span>Chế độ 1 người dùng: Bỏ qua mã PIN &amp; Vào ngay</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => verifyPin(pin)}
+            disabled={pin.length !== 6}
+            className={`w-full py-2.5 px-4 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition-all ${
+              pin.length === 6
+                ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer shadow-sm'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+            }`}
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>Xác nhận mã PIN 6 số</span>
+          </button>
+        </div>
 
         {/* Default PIN Helper */}
         <div className="mt-5 pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">

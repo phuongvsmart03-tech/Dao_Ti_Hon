@@ -31,6 +31,7 @@ import {
   Server,
   Zap,
 } from 'lucide-react';
+import { isPinDisabled } from '@/lib/storage';
 
 interface LocalMetrics {
   step1: number;
@@ -227,7 +228,8 @@ export default function TursoSyncModal({
   };
 
   const handleExecuteReset = async () => {
-    if (inputPin !== currentPin && inputPin !== '150520') {
+    const pinDisabled = isPinDisabled();
+    if (!pinDisabled && inputPin !== currentPin && inputPin !== '150520') {
       setPinError(true);
       return;
     }
@@ -675,46 +677,72 @@ export default function TursoSyncModal({
                     <span>Cảnh báo: Hành động này sẽ xóa toàn bộ dữ liệu trên thiết bị và Turso Cloud!</span>
                   </div>
                   <p className="text-xs text-rose-700 leading-relaxed">
-                    Tất cả sổ kiểm thực, thực đơn, hồ sơ học sinh và giáo án sẽ được xóa sạch về trạng thái rỗng. Hãy nhập mã PIN quản trị để xác nhận:
+                    Tất cả sổ kiểm thực, thực đơn, hồ sơ học sinh và giáo án sẽ được xóa sạch về trạng thái rỗng.{' '}
+                    {isPinDisabled()
+                      ? 'Vì đang ở Chế độ 1 người dùng, bạn có thể nhấn xác nhận ngay bên dưới mà không cần gõ mã PIN:'
+                      : 'Hãy nhập mã PIN quản trị để xác nhận:'}
                   </p>
-                  <div className="flex items-center gap-2 max-w-sm">
-                    <div className="relative flex-1">
-                      <Lock className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
-                      <input
-                        type="password"
-                        placeholder="Nhập mã PIN (mặc định: 150520)"
-                        value={inputPin}
-                        onChange={(e) => {
-                          setInputPin(e.target.value);
+                  {isPinDisabled() ? (
+                    <div className="flex items-center gap-2 max-w-sm">
+                      <button
+                        type="button"
+                        disabled={resetting}
+                        onClick={handleExecuteReset}
+                        className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs cursor-pointer whitespace-nowrap"
+                      >
+                        {resetting ? 'Đang xóa sạch...' : 'Xác Nhận Xóa Sạch (Bỏ qua PIN)'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsResetConfirmOpen(false);
                           setPinError(false);
                         }}
-                        className={`w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border bg-white focus:outline-hidden focus:ring-2 ${
-                          pinError
-                            ? 'border-rose-500 focus:ring-rose-400'
-                            : 'border-slate-300 focus:ring-rose-400'
-                        }`}
-                      />
+                        className="px-3 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 cursor-pointer"
+                      >
+                        Hủy
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      disabled={resetting}
-                      onClick={handleExecuteReset}
-                      className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs cursor-pointer whitespace-nowrap"
-                    >
-                      {resetting ? 'Đang xóa...' : 'Xác Nhận Xóa Sạch'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsResetConfirmOpen(false);
-                        setInputPin('');
-                        setPinError(false);
-                      }}
-                      className="px-3 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 cursor-pointer"
-                    >
-                      Hủy
-                    </button>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-2 max-w-sm">
+                      <div className="relative flex-1">
+                        <Lock className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+                        <input
+                          type="password"
+                          placeholder="Nhập mã PIN (mặc định: 150520)"
+                          value={inputPin}
+                          onChange={(e) => {
+                            setInputPin(e.target.value);
+                            setPinError(false);
+                          }}
+                          className={`w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border bg-white focus:outline-hidden focus:ring-2 ${
+                            pinError
+                              ? 'border-rose-500 focus:ring-rose-400'
+                              : 'border-slate-300 focus:ring-rose-400'
+                          }`}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        disabled={resetting}
+                        onClick={handleExecuteReset}
+                        className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs cursor-pointer whitespace-nowrap"
+                      >
+                        {resetting ? 'Đang xóa...' : 'Xác Nhận Xóa Sạch'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsResetConfirmOpen(false);
+                          setInputPin('');
+                          setPinError(false);
+                        }}
+                        className="px-3 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 cursor-pointer"
+                      >
+                        Hủy
+                      </button>
+                    </div>
+                  )}
                   {pinError && (
                     <p className="text-[11px] font-bold text-rose-600">
                       Mã PIN không chính xác! Vui lòng thử lại.
