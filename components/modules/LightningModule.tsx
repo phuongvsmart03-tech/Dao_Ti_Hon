@@ -49,6 +49,13 @@ interface LightningModuleProps {
   schoolInfo: SchoolInfo;
   menuItems: MenuItem[];
   students: StudentRecord[];
+  defaultSettings?: AppDefaultSettings;
+  onSaveDefaultSettings?: (settings: Partial<AppDefaultSettings>) => void;
+  lightningState?: {
+    customDishes?: Record<string, any>;
+    customCounts?: Record<string, any>;
+  };
+  onSaveLightningState?: (state: { customDishes?: Record<string, any>; customCounts?: Record<string, any> }) => void;
   onClearAllSampleData?: () => void;
 }
 
@@ -115,6 +122,10 @@ export default function LightningModule({
   schoolInfo,
   menuItems,
   students,
+  defaultSettings,
+  onSaveDefaultSettings,
+  lightningState,
+  onSaveLightningState,
   onClearAllSampleData,
 }: LightningModuleProps) {
   // 1. Inputs cho phân hệ Tia Chớp
@@ -139,24 +150,13 @@ export default function LightningModule({
   });
 
   // Cấu hình mặc định hệ thống (Sĩ số, Tiền ăn, Giờ kiểm thực)
-  const initialDefaults = useMemo(() => getDefaultSettings(), []);
+  const initialDefaults = useMemo(() => defaultSettings || getDefaultSettings(), [defaultSettings]);
 
-  // Số lượng bé & tiền ăn mặc định (Tự động lưu và tải từ localStorage)
-  const [nurseryCount, setNurseryCount] = useState<number>(() => {
-    return initialDefaults.nurseryCount;
-  });
-
-  const [kindergartenCount, setKindergartenCount] = useState<number>(() => {
-    return initialDefaults.kindergartenCount;
-  });
-
-  const [nurseryPrice, setNurseryPrice] = useState<number>(() => {
-    return initialDefaults.nurseryPrice;
-  });
-
-  const [kindergartenPrice, setKindergartenPrice] = useState<number>(() => {
-    return initialDefaults.kindergartenPrice;
-  });
+  // Số lượng bé & tiền ăn mặc định (Đồng bộ thời gian thực từ Server)
+  const [nurseryCount, setNurseryCount] = useState<number>(() => initialDefaults.nurseryCount);
+  const [kindergartenCount, setKindergartenCount] = useState<number>(() => initialDefaults.kindergartenCount);
+  const [nurseryPrice, setNurseryPrice] = useState<number>(() => initialDefaults.nurseryPrice);
+  const [kindergartenPrice, setKindergartenPrice] = useState<number>(() => initialDefaults.kindergartenPrice);
 
   const [defaultStep1Time, setDefaultStep1Time] = useState<string>(() => initialDefaults.step1Time || '06:30');
   const [defaultStep2Time, setDefaultStep2Time] = useState<string>(() => initialDefaults.step2Time || '09:30');
@@ -165,6 +165,23 @@ export default function LightningModule({
 
   const [isDefaultModalOpen, setIsDefaultModalOpen] = useState<boolean>(false);
   const [defaultToast, setDefaultToast] = useState<string | null>(null);
+
+  // Tự động nhận diện và đồng bộ tức thì khi Máy khác cập nhật Cấu hình mặc định
+  useEffect(() => {
+    if (defaultSettings) {
+      if (defaultSettings.nurseryCount !== undefined) setNurseryCount(defaultSettings.nurseryCount);
+      if (defaultSettings.kindergartenCount !== undefined) setKindergartenCount(defaultSettings.kindergartenCount);
+      if (defaultSettings.nurseryPrice !== undefined) setNurseryPrice(defaultSettings.nurseryPrice);
+      if (defaultSettings.kindergartenPrice !== undefined) setKindergartenPrice(defaultSettings.kindergartenPrice);
+      if (defaultSettings.step1Time) setDefaultStep1Time(defaultSettings.step1Time);
+      if (defaultSettings.step2Time) setDefaultStep2Time(defaultSettings.step2Time);
+      if (defaultSettings.step3Time) setDefaultStep3Time(defaultSettings.step3Time);
+      if (defaultSettings.sampleTime) setDefaultSampleTime(defaultSettings.sampleTime);
+      if (defaultSettings.includeSaturday !== undefined) setIncludeSaturday(defaultSettings.includeSaturday);
+      if (defaultSettings.includeSunday !== undefined) setIncludeSunday(defaultSettings.includeSunday);
+      if (defaultSettings.dateMode) setDateMode(defaultSettings.dateMode);
+    }
+  }, [defaultSettings]);
 
   const handleSaveAllAsDefault = (
     nCnt = nurseryCount,
@@ -176,7 +193,7 @@ export default function LightningModule({
     s3T = defaultStep3Time,
     smT = defaultSampleTime
   ) => {
-    saveDefaultSettings({
+    const newSettings: AppDefaultSettings = {
       nurseryCount: nCnt,
       kindergartenCount: kCnt,
       nurseryPrice: nPr,
@@ -185,9 +202,11 @@ export default function LightningModule({
       step2Time: s2T,
       step3Time: s3T,
       sampleTime: smT,
+      dateMode,
       includeSaturday,
       includeSunday,
-    });
+    };
+
     setNurseryCount(nCnt);
     setKindergartenCount(kCnt);
     setNurseryPrice(nPr);
@@ -198,63 +217,23 @@ export default function LightningModule({
     setDefaultSampleTime(smT);
     setIsDefaultModalOpen(false);
 
-    // Đồng bộ ngay lập tức lên Máy Chủ Đồng Bộ để tất cả các thiết bị khác nhận cùng 1 cấu hình
-    fetch('/api/turso', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'save_default_settings',
-        defaultSettings: {
-          nurseryCount: nCnt,
-          kindergartenCount: kCnt,
-          nurseryPrice: nPr,
-          kindergartenPrice: kPr,
-          step1Time: s1T,
-          step2Time: s2T,
-          step3Time: s3T,
-          sampleTime: smT,
-          includeSaturday,
-          includeSunday,
-        },
-      }),
-    }).catch(() => {});
+    if (onSaveDefaultSettings) {
+      onSaveDefaultSettings(newSettings);
+    } else {
+      saveDefaultSettings(newSettings);
+      fetch('/api/turso', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_default_settings',
+          defaultSettings: newSettings,
+        }),
+      }).catch(() => {});
+    }
 
     setDefaultToast('Đã lưu cấu hình mặc định (Sĩ số bé ăn, Tiền ăn, Giờ kiểm thực) & Đồng bộ toàn hệ thống!');
     setTimeout(() => setDefaultToast(null), 3500);
   };
-
-  // Tự động lưu cấu hình mặc định (số bé, tiền ăn) vào localStorage & đồng bộ máy chủ
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        saveDefaultSettings({ nurseryCount, kindergartenCount, nurseryPrice, kindergartenPrice });
-      } catch {}
-
-      const timer = setTimeout(() => {
-        fetch('/api/turso', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'save_default_settings',
-            defaultSettings: {
-              nurseryCount,
-              kindergartenCount,
-              nurseryPrice,
-              kindergartenPrice,
-              step1Time: defaultStep1Time,
-              step2Time: defaultStep2Time,
-              step3Time: defaultStep3Time,
-              sampleTime: defaultSampleTime,
-              includeSaturday,
-              includeSunday,
-            },
-          }),
-        }).catch(() => {});
-      }, 1200);
-
-      return () => clearTimeout(timer);
-    }
-  }, [nurseryCount, kindergartenCount, nurseryPrice, kindergartenPrice, defaultStep1Time, defaultStep2Time, defaultStep3Time, defaultSampleTime, includeSaturday, includeSunday]);
 
   // Template lựa chọn in
   const [selectedTemplate, setSelectedTemplate] = useState<
@@ -264,7 +243,7 @@ export default function LightningModule({
   // Preview Modal In
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
-  // Lưu món ăn tùy chỉnh riêng cho từng ngày (Tự động lưu vĩnh viễn vào localStorage)
+  // Lưu món ăn tùy chỉnh riêng cho từng ngày
   const [customDishesByDate, setCustomDishesByDate] = useState<
     Record<
       string,
@@ -279,6 +258,7 @@ export default function LightningModule({
       }
     >
   >(() => {
+    if (lightningState?.customDishes) return lightningState.customDishes;
     if (typeof window === 'undefined') return {};
     try {
       const saved = localStorage.getItem('lightning_custom_dishes');
@@ -288,10 +268,11 @@ export default function LightningModule({
     }
   });
 
-  // Lưu số lượng suất Nhà Trẻ & Mẫu Giáo nhập riêng cho từng ngày (Tự động lưu vĩnh viễn vào localStorage)
+  // Lưu số lượng suất Nhà Trẻ & Mẫu Giáo nhập riêng cho từng ngày
   const [customCountsByDate, setCustomCountsByDate] = useState<
     Record<string, { nurseryCount?: number; kindergartenCount?: number }>
   >(() => {
+    if (lightningState?.customCounts) return lightningState.customCounts;
     if (typeof window === 'undefined') return {};
     try {
       const saved = localStorage.getItem('lightning_custom_counts');
@@ -301,33 +282,13 @@ export default function LightningModule({
     }
   });
 
-  // Tự động ghi nhớ các món và sĩ số tùy chỉnh vào localStorage & máy chủ đồng bộ
+  // Tự động nhận diện khi máy khác cập nhật món hoặc sĩ số từng ngày
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('lightning_custom_dishes', JSON.stringify(customDishesByDate));
-        localStorage.setItem('lightning_custom_counts', JSON.stringify(customCountsByDate));
-      } catch (err) {
-        console.error('Lỗi khi lưu tùy chỉnh:', err);
-      }
-
-      const timer = setTimeout(() => {
-        fetch('/api/turso', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'save_lightning_state',
-            lightningState: {
-              customDishes: customDishesByDate,
-              customCounts: customCountsByDate,
-            },
-          }),
-        }).catch(() => {});
-      }, 1500);
-
-      return () => clearTimeout(timer);
+    if (lightningState) {
+      if (lightningState.customDishes) setCustomDishesByDate(lightningState.customDishes);
+      if (lightningState.customCounts) setCustomCountsByDate(lightningState.customCounts);
     }
-  }, [customDishesByDate, customCountsByDate]);
+  }, [lightningState]);
 
   // Kho toàn bộ món ăn từ dish-library
   const [allDishes, setAllDishes] = useState<DishItem[]>(() => getStoredDishLibrary());
@@ -477,13 +438,17 @@ export default function LightningModule({
   ) => {
     setCustomCountsByDate((prev) => {
       const current = prev[dateStr] || {};
-      return {
+      const updated = {
         ...prev,
         [dateStr]: {
           ...current,
           [field === 'nursery' ? 'nurseryCount' : 'kindergartenCount']: value,
         },
       };
+      if (onSaveLightningState) {
+        onSaveLightningState({ customDishes: customDishesByDate, customCounts: updated });
+      }
+      return updated;
     });
   };
 
@@ -513,10 +478,16 @@ export default function LightningModule({
         updated.lunchDessert = snack; // đồng bộ món tráng miệng xế chiều
       }
 
-      return {
+      const nextDishes = {
         ...prev,
         [dateStr]: updated,
       };
+
+      if (onSaveLightningState) {
+        onSaveLightningState({ customDishes: nextDishes, customCounts: customCountsByDate });
+      }
+
+      return nextDishes;
     });
   };
 
@@ -545,6 +516,11 @@ export default function LightningModule({
         }
         nextState[d] = updated;
       });
+
+      if (onSaveLightningState) {
+        onSaveLightningState({ customDishes: nextState, customCounts: customCountsByDate });
+      }
+
       return nextState;
     });
     setMealModalState(null);
@@ -553,23 +529,32 @@ export default function LightningModule({
   // Khôi phục mặc định cho 1 ngày
   const handleResetDate = (dateStr: string) => {
     setCustomDishesByDate((prev) => {
-      const nextState = { ...prev };
-      delete nextState[dateStr];
-      return nextState;
-    });
-    setCustomCountsByDate((prev) => {
-      const nextState = { ...prev };
-      delete nextState[dateStr];
-      return nextState;
+      const nextDishes = { ...prev };
+      delete nextDishes[dateStr];
+      setCustomCountsByDate((countsPrev) => {
+        const nextCounts = { ...countsPrev };
+        delete nextCounts[dateStr];
+        if (onSaveLightningState) {
+          onSaveLightningState({ customDishes: nextDishes, customCounts: nextCounts });
+        }
+        return nextCounts;
+      });
+      return nextDishes;
     });
   };
 
   // Xóa trắng theo ngày (đặt suất NT & MG về 0)
   const handleClearDate = (dateStr: string) => {
-    setCustomCountsByDate((prev) => ({
-      ...prev,
-      [dateStr]: { nurseryCount: 0, kindergartenCount: 0 },
-    }));
+    setCustomCountsByDate((prev) => {
+      const nextCounts = {
+        ...prev,
+        [dateStr]: { nurseryCount: 0, kindergartenCount: 0 },
+      };
+      if (onSaveLightningState) {
+        onSaveLightningState({ customDishes: customDishesByDate, customCounts: nextCounts });
+      }
+      return nextCounts;
+    });
   };
 
   // Xóa trắng theo tuần (đặt suất NT & MG của tất cả các ngày trong tuần này về 0)
@@ -587,6 +572,9 @@ export default function LightningModule({
       weekDates.forEach((d) => {
         next[d] = { nurseryCount: 0, kindergartenCount: 0 };
       });
+      if (onSaveLightningState) {
+        onSaveLightningState({ customDishes: customDishesByDate, customCounts: next });
+      }
       return next;
     });
   };
@@ -600,6 +588,9 @@ export default function LightningModule({
       for (let day = 1; day <= totalDays; day++) {
         const dStr = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         next[dStr] = { nurseryCount: 0, kindergartenCount: 0 };
+      }
+      if (onSaveLightningState) {
+        onSaveLightningState({ customDishes: customDishesByDate, customCounts: next });
       }
       return next;
     });
@@ -630,6 +621,9 @@ export default function LightningModule({
         try {
           localStorage.setItem('lightning_custom_counts', JSON.stringify(updated));
         } catch (e) {}
+      }
+      if (onSaveLightningState) {
+        onSaveLightningState({ customDishes: customDishesByDate, customCounts: updated });
       }
       return updated;
     });
@@ -1363,6 +1357,9 @@ export default function LightningModule({
                   if (typeof window !== 'undefined') {
                     localStorage.removeItem('lightning_custom_dishes');
                     localStorage.removeItem('lightning_custom_counts');
+                  }
+                  if (onSaveLightningState) {
+                    onSaveLightningState({ customDishes: {}, customCounts: {} });
                   }
                 }}
                 className="text-xs font-semibold text-slate-600 hover:text-slate-800 flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 cursor-pointer transition-colors"

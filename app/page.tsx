@@ -140,6 +140,54 @@ export default function MainPage() {
   // School Information state
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>(() => getSchoolInfo());
 
+  // Default App Settings & Lightning State (Sĩ số NT/MG, Tiền ăn, Giờ kiểm thực & Món tùy chỉnh)
+  const [defaultSettings, setDefaultSettings] = useState<AppDefaultSettings>(() => getDefaultSettings());
+  const [lightningState, setLightningState] = useState<{
+    customDishes?: Record<string, any>;
+    customCounts?: Record<string, any>;
+  }>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const dishes = localStorage.getItem('lightning_custom_dishes');
+      const counts = localStorage.getItem('lightning_custom_counts');
+      return {
+        customDishes: dishes ? JSON.parse(dishes) : {},
+        customCounts: counts ? JSON.parse(counts) : {},
+      };
+    } catch {
+      return {};
+    }
+  });
+
+  const handleSaveDefaultSettings = useCallback((settings: Partial<AppDefaultSettings>) => {
+    const updated = saveDefaultSettings(settings);
+    setDefaultSettings(updated);
+    fetch('/api/turso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save_default_settings',
+        defaultSettings: updated,
+      }),
+    }).catch(() => {});
+  }, []);
+
+  const handleSaveLightningState = useCallback((state: { customDishes?: Record<string, any>; customCounts?: Record<string, any> }) => {
+    setLightningState(state);
+    if (typeof window !== 'undefined') {
+      if (state.customDishes) localStorage.setItem('lightning_custom_dishes', JSON.stringify(state.customDishes));
+      if (state.customCounts) localStorage.setItem('lightning_custom_counts', JSON.stringify(state.customCounts));
+    }
+    fetch('/api/turso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save_lightning_state',
+        lightningState: state,
+      }),
+    }).catch(() => {});
+  }, []);
+
   // Data states for all 9 modules
   const [step1Data, setStep1Data] = useState<Step1Record[]>(() => moduleStorage.getStep1());
   const [step2Data, setStep2Data] = useState<Step2Record[]>(() => moduleStorage.getStep2());
@@ -156,6 +204,10 @@ export default function MainPage() {
   const [isSavingCloud, setIsSavingCloud] = useState(false);
   const [isClearAllDataModalOpen, setIsClearAllDataModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
+
+  // Cơ chế chống ghi đè khi khởi động: Cờ xác định dữ liệu Master đã tải xong từ máy chủ
+  const isInitialLoadCompletedRef = useRef(false);
+  const [isInitialLoadCompleted, setIsInitialLoadCompleted] = useState(false);
 
   const showToast = useCallback((text: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToastMessage({ text, type });
@@ -365,8 +417,9 @@ export default function MainPage() {
     showToast('Đã nạp mẫu lịch sử thao tác thành công!', 'success');
   };
 
-  // Sync module to central database
+  // Sync module to central database (Có bảo vệ chống ghi đè khi khởi động)
   const syncModuleToServer = useCallback((moduleId: string, items: any) => {
+    if (!isInitialLoadCompletedRef.current) return;
     fetch('/api/turso', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -396,10 +449,12 @@ export default function MainPage() {
           setSchoolInfo(data.schoolInfo);
           saveSchoolInfo(data.schoolInfo);
         }
-        if (data.defaultSettings) {
+        if (data.defaultSettings && Object.keys(data.defaultSettings).length > 0) {
+          setDefaultSettings(data.defaultSettings);
           saveDefaultSettings(data.defaultSettings);
         }
         if (data.lightningState) {
+          setLightningState(data.lightningState);
           if (data.lightningState.customDishes) {
             localStorage.setItem('lightning_custom_dishes', JSON.stringify(data.lightningState.customDishes));
           }
@@ -456,8 +511,12 @@ export default function MainPage() {
           moduleStorage.saveTransactions(data.financeTransactions);
         }
       }
+      isInitialLoadCompletedRef.current = true;
+      setIsInitialLoadCompleted(true);
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu từ máy chủ:', err);
+      isInitialLoadCompletedRef.current = true;
+      setIsInitialLoadCompleted(true);
     }
   }, []);
 
@@ -476,10 +535,18 @@ export default function MainPage() {
     const interval = setInterval(runSync, 7000);
     window.addEventListener('focus', runSync);
 
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key && (e.key.startsWith('preschool_') || e.key.startsWith('lightning_'))) {
+        runSync();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
       isMounted = false;
       clearInterval(interval);
       window.removeEventListener('focus', runSync);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, [loadMasterData]);
 
@@ -492,7 +559,19 @@ export default function MainPage() {
       body: JSON.stringify({ action: 'save_school_info', payload: schoolInfo }),
     });
 
-    // 2. Sync all modules + dish library
+    // 2. Sync default settings & lightning state
+    await fetch('/api/turso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_default_settings', defaultSettings }),
+    });
+    await fetch('/api/turso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_lightning_state', lightningState }),
+    });
+
+    // 3. Sync all modules + dish library
     const modulesToSync = [
       { moduleId: 'step1', items: step1Data },
       { moduleId: 'step2', items: step2Data },
@@ -533,6 +612,19 @@ export default function MainPage() {
     if (data.schoolInfo) {
       setSchoolInfo(data.schoolInfo);
       saveSchoolInfo(data.schoolInfo);
+    }
+    if (data.defaultSettings && Object.keys(data.defaultSettings).length > 0) {
+      setDefaultSettings(data.defaultSettings);
+      saveDefaultSettings(data.defaultSettings);
+    }
+    if (data.lightningState) {
+      setLightningState(data.lightningState);
+      if (data.lightningState.customDishes) {
+        localStorage.setItem('lightning_custom_dishes', JSON.stringify(data.lightningState.customDishes));
+      }
+      if (data.lightningState.customCounts) {
+        localStorage.setItem('lightning_custom_counts', JSON.stringify(data.lightningState.customCounts));
+      }
     }
     if (data.step1 && data.step1.length > 0) {
       setStep1Data(data.step1);
@@ -1483,6 +1575,10 @@ export default function MainPage() {
               schoolInfo={schoolInfo}
               menuItems={menuData}
               students={studentsData}
+              defaultSettings={defaultSettings}
+              onSaveDefaultSettings={handleSaveDefaultSettings}
+              lightningState={lightningState}
+              onSaveLightningState={handleSaveLightningState}
               onClearAllSampleData={() => setIsClearAllDataModalOpen(true)}
             />
           )}
