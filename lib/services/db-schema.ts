@@ -297,21 +297,111 @@ export async function ensureTablesInitialized(db: Client): Promise<void> {
   const batchStatements = TABLE_DEFINITIONS.map(sql => ({ sql, args: [] }));
   await db.batch(batchStatements, 'write');
 
-  // Thêm migration các cột còn thiếu nếu table cũ đã tồn tại (silent migrations)
+  // Thêm migration các cột còn thiếu nếu table cũ đã tồn tại trong local SQLite hoặc Turso
   const migrations = [
+    // school_info migrations
+    `ALTER TABLE school_info ADD COLUMN inspector_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN receiver_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN sample_keeper_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN sample_disposer_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN default_print_orientation TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN creator_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN team_leader_nutrition_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN team_leader_education_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN vice_principal_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN accountant_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN meat_supplier_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN meat_supplier_address TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN meat_deliverer_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN veg_supplier_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN veg_supplier_address TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN veg_deliverer_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN seafood_supplier_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN seafood_supplier_address TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN seafood_deliverer_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN dry_producer_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN dry_producer_address TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN dry_supplier_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN dry_supplier_address TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN dry_deliverer_name TEXT;`,
+    `ALTER TABLE school_info ADD COLUMN logo_url TEXT;`,
     `ALTER TABLE school_info ADD COLUMN updated_at INTEGER DEFAULT 0;`,
+
+    // step1, step2, step3
     `ALTER TABLE step1_inspections ADD COLUMN updated_at INTEGER DEFAULT 0;`,
     `ALTER TABLE step2_cookings ADD COLUMN updated_at INTEGER DEFAULT 0;`,
     `ALTER TABLE step3_tastings ADD COLUMN updated_at INTEGER DEFAULT 0;`,
+
+    // menu_items
+    `ALTER TABLE menu_items ADD COLUMN recipe_breakdowns_json TEXT;`,
+    `ALTER TABLE menu_items ADD COLUMN estimated_daily_cost REAL;`,
+    `ALTER TABLE menu_items ADD COLUMN macro_distribution_json TEXT;`,
     `ALTER TABLE menu_items ADD COLUMN updated_at INTEGER DEFAULT 0;`,
+
+    // sample_disposals
+    `ALTER TABLE sample_disposals ADD COLUMN sample_weight TEXT;`,
+    `ALTER TABLE sample_disposals ADD COLUMN container_type TEXT;`,
+    `ALTER TABLE sample_disposals ADD COLUMN storage_temp TEXT;`,
+    `ALTER TABLE sample_disposals ADD COLUMN sampler_name TEXT;`,
+    `ALTER TABLE sample_disposals ADD COLUMN witness_name TEXT;`,
     `ALTER TABLE sample_disposals ADD COLUMN updated_at INTEGER DEFAULT 0;`,
+
+    // students & health
+    `ALTER TABLE students ADD COLUMN allergies_or_diet TEXT;`,
+    `ALTER TABLE students ADD COLUMN notes TEXT;`,
     `ALTER TABLE students ADD COLUMN updated_at INTEGER DEFAULT 0;`,
     `ALTER TABLE health_records ADD COLUMN updated_at INTEGER DEFAULT 0;`,
+
+    // staff
+    `ALTER TABLE staff ADD COLUMN gender TEXT;`,
+    `ALTER TABLE staff ADD COLUMN assigned_class_or_dept TEXT;`,
+    `ALTER TABLE staff ADD COLUMN assigned_duty TEXT;`,
+    `ALTER TABLE staff ADD COLUMN email TEXT;`,
+    `ALTER TABLE staff ADD COLUMN hygiene_cert_date TEXT;`,
+    `ALTER TABLE staff ADD COLUMN food_safety_cert_date TEXT;`,
+    `ALTER TABLE staff ADD COLUMN health_check_date TEXT;`,
+    `ALTER TABLE staff ADD COLUMN health_check_expiry TEXT;`,
+    `ALTER TABLE staff ADD COLUMN contract_status TEXT;`,
+    `ALTER TABLE staff ADD COLUMN start_date TEXT;`,
+    `ALTER TABLE staff ADD COLUMN status TEXT;`,
+    `ALTER TABLE staff ADD COLUMN notes TEXT;`,
     `ALTER TABLE staff ADD COLUMN updated_at INTEGER DEFAULT 0;`,
+
+    // lesson_plans
+    `ALTER TABLE lesson_plans ADD COLUMN title TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN target_class TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN age_group TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN subject TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN topic TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN month TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN date_range TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN development_field TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN learning_objectives TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN activities_plan TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN preparation TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN approval_date TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN file_attachment_name TEXT;`,
+    `ALTER TABLE lesson_plans ADD COLUMN notes TEXT;`,
     `ALTER TABLE lesson_plans ADD COLUMN updated_at INTEGER DEFAULT 0;`,
+
+    // teacher_salaries
+    `ALTER TABLE teacher_salaries ADD COLUMN staff_id TEXT;`,
+    `ALTER TABLE teacher_salaries ADD COLUMN assigned_class TEXT;`,
+    `ALTER TABLE teacher_salaries ADD COLUMN bank_account TEXT;`,
+    `ALTER TABLE teacher_salaries ADD COLUMN bank_name TEXT;`,
+    `ALTER TABLE teacher_salaries ADD COLUMN notes TEXT;`,
     `ALTER TABLE teacher_salaries ADD COLUMN updated_at INTEGER DEFAULT 0;`,
+
+    // finance_transactions
+    `ALTER TABLE finance_transactions ADD COLUMN receipt_number TEXT;`,
+    `ALTER TABLE finance_transactions ADD COLUMN notes TEXT;`,
+    `ALTER TABLE finance_transactions ADD COLUMN is_automatic_sync INTEGER DEFAULT 0;`,
     `ALTER TABLE finance_transactions ADD COLUMN updated_at INTEGER DEFAULT 0;`,
+
+    // dish_breakdowns & dish_library
     `ALTER TABLE dish_breakdowns ADD COLUMN updated_at INTEGER DEFAULT 0;`,
+    `ALTER TABLE dish_library ADD COLUMN is_favorite INTEGER DEFAULT 0;`,
+    `ALTER TABLE dish_library ADD COLUMN ingredients_json TEXT;`,
     `ALTER TABLE dish_library ADD COLUMN updated_at INTEGER DEFAULT 0;`,
   ];
 
@@ -319,7 +409,7 @@ export async function ensureTablesInitialized(db: Client): Promise<void> {
     try {
       await db.execute(mig);
     } catch {
-      // Column already exists or table already has updated_at, safe to ignore
+      // Column already exists, safe to ignore
     }
   }
 }

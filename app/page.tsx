@@ -374,6 +374,15 @@ export default function MainPage() {
     }).catch((e) => console.error('Lỗi khi đồng bộ lên máy chủ:', e));
   }, []);
 
+  // Xóa nguyên tử bản ghi trực tiếp trên Server Database để không bị hồi sinh lại
+  const deleteRecordFromServer = useCallback((targetModule: string, id: string) => {
+    fetch('/api/turso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete_record', targetModule, id }),
+    }).catch((e) => console.error('Lỗi khi xóa bản ghi trên máy chủ:', e));
+  }, []);
+
   // Tải dữ liệu chính từ Master Database và tự động đồng bộ thời gian thực cho tất cả các máy
   const loadMasterData = useCallback(async () => {
     try {
@@ -821,7 +830,7 @@ export default function MainPage() {
     const updated = step1Data.filter((r) => r.id !== id);
     setStep1Data(updated);
     moduleStorage.saveStep1(updated);
-    syncModuleToServer('step1', updated);
+    deleteRecordFromServer('step1', id);
   };
 
   // CRUD Handlers for Step 2
@@ -839,7 +848,7 @@ export default function MainPage() {
     const updated = step2Data.filter((r) => r.id !== id);
     setStep2Data(updated);
     moduleStorage.saveStep2(updated);
-    syncModuleToServer('step2', updated);
+    deleteRecordFromServer('step2', id);
   };
 
   // CRUD Handlers for Step 3
@@ -857,7 +866,7 @@ export default function MainPage() {
     const updated = step3Data.filter((r) => r.id !== id);
     setStep3Data(updated);
     moduleStorage.saveStep3(updated);
-    syncModuleToServer('step3', updated);
+    deleteRecordFromServer('step3', id);
   };
 
   // CRUD Handlers for Menu
@@ -875,7 +884,7 @@ export default function MainPage() {
     const updated = menuData.filter((r) => r.id !== id);
     setMenuData(updated);
     moduleStorage.saveMenu(updated);
-    syncModuleToServer('menu', updated);
+    deleteRecordFromServer('menu', id);
   };
 
   // CRUD Handlers for Samples
@@ -893,7 +902,7 @@ export default function MainPage() {
     const updated = samplesData.filter((r) => r.id !== id);
     setSamplesData(updated);
     moduleStorage.saveSamples(updated);
-    syncModuleToServer('samples', updated);
+    deleteRecordFromServer('samples', id);
   };
 
   // CRUD Handlers for Students
@@ -911,7 +920,7 @@ export default function MainPage() {
     const updated = studentsData.filter((r) => r.id !== id);
     setStudentsData(updated);
     moduleStorage.saveStudents(updated);
-    syncModuleToServer('students', updated);
+    deleteRecordFromServer('students', id);
   };
 
   // CRUD Handlers for Health
@@ -929,7 +938,7 @@ export default function MainPage() {
     const updated = healthData.filter((r) => r.id !== id);
     setHealthData(updated);
     moduleStorage.saveHealth(updated);
-    syncModuleToServer('health', updated);
+    deleteRecordFromServer('health', id);
   };
 
   // CRUD Handlers for Staff
@@ -947,7 +956,7 @@ export default function MainPage() {
     const updated = staffData.filter((r) => r.id !== id);
     setStaffData(updated);
     moduleStorage.saveStaff(updated);
-    syncModuleToServer('staff', updated);
+    deleteRecordFromServer('staff', id);
   };
 
   // CRUD Handlers for Lesson Plans
@@ -965,7 +974,7 @@ export default function MainPage() {
     const updated = lessonsData.filter((r) => r.id !== id);
     setLessonsData(updated);
     moduleStorage.saveLessons(updated);
-    syncModuleToServer('lessonPlans', updated);
+    deleteRecordFromServer('lessonPlans', id);
   };
 
   // CRUD Handlers for Teacher Salaries
@@ -983,7 +992,7 @@ export default function MainPage() {
     const updated = salariesData.filter((r) => r.id !== id);
     setSalariesData(updated);
     moduleStorage.saveSalaries(updated);
-    syncModuleToServer('salaries', updated);
+    deleteRecordFromServer('salaries', id);
   };
 
   // CRUD Handlers for Finance Transactions
@@ -1001,7 +1010,7 @@ export default function MainPage() {
     const updated = transactionsData.filter((r) => r.id !== id);
     setTransactionsData(updated);
     moduleStorage.saveTransactions(updated);
-    syncModuleToServer('finance', updated);
+    deleteRecordFromServer('finance', id);
   };
 
   // Compute counts for sidebar badges

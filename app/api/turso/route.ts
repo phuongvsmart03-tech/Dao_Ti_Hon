@@ -231,6 +231,47 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, message: 'Đã lưu nhật ký thao tác lên máy chủ thành công' });
       }
 
+      // Xử lý Xóa 1 bản ghi trực tiếp trên Database
+      if (action === 'delete_record') {
+        const targetModule = moduleName || body.moduleId || body.targetModule;
+        const targetId = body.id || payload?.id || data?.id;
+        if (!targetModule || !targetId) {
+          return NextResponse.json({ success: false, error: 'Thiếu targetModule hoặc targetId' }, { status: 400 });
+        }
+        const tableMap: Record<string, string> = {
+          step1: 'step1_inspections',
+          step2: 'step2_cookings',
+          step3: 'step3_tastings',
+          samples: 'sample_disposals',
+          sample_disposals: 'sample_disposals',
+          menu: 'menu_items',
+          menu_items: 'menu_items',
+          students: 'students',
+          health: 'health_records',
+          student_health_records: 'health_records',
+          staff: 'staff',
+          staff_members: 'staff',
+          lessons: 'lesson_plans',
+          lessonPlans: 'lesson_plans',
+          lesson_plans: 'lesson_plans',
+          salaries: 'teacher_salaries',
+          teacher_salaries: 'teacher_salaries',
+          finance: 'finance_transactions',
+          finance_transactions: 'finance_transactions',
+          dishes: 'dish_library',
+          dish_library: 'dish_library',
+        };
+        const tableName = tableMap[targetModule];
+        if (tableName) {
+          await db.execute({
+            sql: `DELETE FROM ${tableName} WHERE id = ?`,
+            args: [targetId],
+          });
+          return NextResponse.json({ success: true, message: `Đã xóa bản ghi ${targetId} khỏi bảng ${tableName}` });
+        }
+        return NextResponse.json({ success: false, error: `Không tìm thấy bảng cho module '${targetModule}'` }, { status: 400 });
+      }
+
       // 1. Đồng bộ từng module (Sync Module with Upsert & LWW)
       if (action === 'sync_module') {
         const targetModule = moduleName || body.moduleId || body.payload?.moduleId;
