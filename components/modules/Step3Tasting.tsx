@@ -55,7 +55,7 @@ export default function Step3Tasting({
     sensoryEvaluation: 'Màu sắc tươi, mùi vị thơm ngon tự nhiên, chín kỹ',
     servingTemp: '70°C',
     sampleWeight: '150g',
-    storageLocation: 'Tủ lưu mẫu số 01 - Ngăn 1 (3°C)',
+    storageLocation: 'Tủ lưu mẫu số 01 - Ngăn 1 (5°C)',
     taster: 'Hiệu trưởng Nguyễn Thị Mai Hoa',
     keeper: 'Cán bộ Y tế Trần Thị Thu Hà',
     result: 'Đủ điều kiện cho trẻ ăn',
@@ -88,7 +88,7 @@ export default function Step3Tasting({
       sensoryEvaluation: 'Màu sắc tươi, mùi vị thơm ngon tự nhiên, chín kỹ',
       servingTemp: '70°C',
       sampleWeight: '150g',
-      storageLocation: 'Tủ lưu mẫu số 01 - Ngăn 1 (3°C)',
+      storageLocation: 'Tủ lưu mẫu số 01 - Ngăn 1 (5°C)',
       taster: 'Hiệu trưởng Nguyễn Thị Mai Hoa',
       keeper: 'Cán bộ Y tế Trần Thị Thu Hà',
       result: 'Đủ điều kiện cho trẻ ăn',
@@ -154,7 +154,7 @@ export default function Step3Tasting({
             sensoryEvaluation: 'Màu sắc tươi, mùi vị thơm ngon tự nhiên, chín kỹ',
             servingTemp: tmpl.temp,
             sampleWeight: '150g',
-            storageLocation: 'Tủ lưu mẫu số 01 - Ngăn 1 (3°C)',
+            storageLocation: 'Tủ lưu mẫu số 01 - Ngăn 1 (5°C)',
             taster: tmpl.taster,
             keeper: 'Trần Thị Thu Hà (Y tế)',
             result: 'Đủ điều kiện cho trẻ ăn',
@@ -518,7 +518,7 @@ export default function Step3Tasting({
                   <input
                     type="text"
                     required
-                    placeholder="VD: Tủ lưu mẫu số 01 - Ngăn 1 (3°C)"
+                    placeholder="VD: Tủ lưu mẫu số 01 - Ngăn 1 (5°C)"
                     value={formState.storageLocation}
                     onChange={(e) => setFormState({ ...formState, storageLocation: e.target.value })}
                     className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600"

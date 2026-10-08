@@ -290,6 +290,11 @@ export const TABLE_DEFINITIONS: string[] = [
     custom_counts_json TEXT,
     default_settings_json TEXT,
     updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+  )`,
+  `CREATE TABLE IF NOT EXISTS deleted_records (
+    id TEXT PRIMARY KEY,
+    module TEXT NOT NULL,
+    deleted_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
   )`
 ];
 

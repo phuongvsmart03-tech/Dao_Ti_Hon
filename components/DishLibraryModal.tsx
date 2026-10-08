@@ -26,7 +26,6 @@ import {
   RefreshCw,
   Download,
   Upload,
-  CloudCheck,
   Cloud,
 } from 'lucide-react';
 import { DishItem, DishCategory } from '@/types/preschool';

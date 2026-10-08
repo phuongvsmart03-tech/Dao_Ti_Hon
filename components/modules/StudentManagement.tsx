@@ -13,15 +13,17 @@ import {
   Save,
   CheckCircle2,
   AlertOctagon,
-  HelpCircle,
+  CircleHelp,
   Phone,
   CalendarDays,
 } from 'lucide-react';
-import { StudentRecord } from '@/types/preschool';
+import { StudentRecord, HealthRecord } from '@/types/preschool';
 import AttendanceHeatmapModal from '@/components/AttendanceHeatmapModal';
+import { HeartPulse } from 'lucide-react';
 
 interface StudentManagementProps {
   records: StudentRecord[];
+  healthRecords?: HealthRecord[];
   onSaveRecord: (record: StudentRecord) => void;
   onDeleteRecord: (id: string) => void;
   onPrintPreview: () => void;
@@ -30,6 +32,7 @@ interface StudentManagementProps {
 
 export default function StudentManagement({
   records,
+  healthRecords = [],
   onSaveRecord,
   onDeleteRecord,
   onPrintPreview,
@@ -260,7 +263,8 @@ export default function StudentManagement({
                 <th className="p-3 border-r border-slate-200">Họ và tên học sinh</th>
                 <th className="p-3 border-r border-slate-200">Ngày sinh & Giới tính</th>
                 <th className="p-3 border-r border-slate-200">Lớp học</th>
-                <th className="p-3 border-r border-slate-200">Họ tên Phụ huynh & SĐT</th>
+                <th className="p-3 border-r border-slate-200">Kênh Dinh Dưỡng &amp; SK</th>
+                <th className="p-3 border-r border-slate-200">Họ tên Phụ huynh &amp; SĐT</th>
                 <th className="p-3 border-r border-slate-200">Địa chỉ cư trú</th>
                 <th className="p-3 border-r border-slate-200">Lưu ý ăn uống / Dị ứng</th>
                 <th className="p-3 border-r border-slate-200 text-center">Điểm danh hôm nay</th>
@@ -292,6 +296,41 @@ export default function StudentManagement({
                     </td>
                     <td className="p-3 border-r border-slate-200 font-semibold text-slate-800">
                       {r.className}
+                    </td>
+                    <td className="p-3 border-r border-slate-200">
+                      {(() => {
+                        const hr = healthRecords.find(
+                          (h) => h.studentId === r.id || h.studentName.trim().toLowerCase() === r.fullName.trim().toLowerCase()
+                        );
+                        if (!hr) {
+                          return (
+                            <span className="inline-flex items-center gap-1 text-[10.5px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                              Chờ đo đợt mới
+                            </span>
+                          );
+                        }
+                        const isNormal = hr.nutritionStatus.includes('Kênh A') || hr.nutritionStatus.includes('Bình thường');
+                        const isUnder = hr.nutritionStatus.includes('nhẹ cân') || hr.nutritionStatus.includes('thấp còi');
+                        return (
+                          <div className="space-y-0.5">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold border ${
+                                isNormal
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                  : isUnder
+                                  ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                  : 'bg-purple-50 text-purple-900 border-purple-300'
+                              }`}
+                            >
+                              <HeartPulse className="w-3 h-3 shrink-0" />
+                              <span>{hr.nutritionStatus}</span>
+                            </span>
+                            <div className="text-[10px] text-slate-500 font-mono">
+                              {hr.heightCm}cm • {hr.weightKg}kg
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="p-3 border-r border-slate-200">
                       <div className="font-medium text-slate-900">{r.parentName}</div>
@@ -326,7 +365,7 @@ export default function StudentManagement({
                         {r.attendanceStatus === 'Có mặt' ? (
                           <CheckCircle2 className="w-3.5 h-3.5" />
                         ) : r.attendanceStatus === 'Nghỉ có phép' ? (
-                          <HelpCircle className="w-3.5 h-3.5" />
+                          <CircleHelp className="w-3.5 h-3.5" />
                         ) : (
                           <AlertOctagon className="w-3.5 h-3.5" />
                         )}

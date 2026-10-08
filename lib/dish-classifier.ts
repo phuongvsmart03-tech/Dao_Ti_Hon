@@ -130,9 +130,8 @@ export function classifyDish(dishName: string): ClassifiedDishInfo {
     };
   }
 
-  // 4. NHÓM: BỮA SÁNG & BỮA XẾ (Bún, phở, miến, cháo, hủ tiếu, bánh mặn)
-  const isBreakfastOrSnack =
-    lower.includes('cháo') ||
+  // 4. NHÓM: BỮA SÁNG & BỮA XẾ
+  const isBreakfast =
     lower.includes('bún') ||
     lower.includes('phở') ||
     lower.includes('miến') ||
@@ -144,16 +143,40 @@ export function classifyDish(dishName: string): ClassifiedDishInfo {
     lower.includes('bánh mì') ||
     lower.includes('nui') ||
     lower.includes('mì ý') ||
-    lower.includes('mì sợi');
+    lower.includes('mì sợi') ||
+    (lower.includes('cháo') && !lower.includes('xế'));
 
-  if (isBreakfastOrSnack) {
+  if (isBreakfast) {
     return {
-      category: 'Bữa sáng & Bữa xế',
+      category: 'Bữa sáng',
       defaultMealSlot: 'breakfast',
       caloriesEstimate: 220,
       suitableAge: 'Tất cả lứa tuổi',
       nutritionTags: ['Năng lượng dồi dào', 'Dễ tiêu hóa', 'Ấm bụng', 'Đầy đủ 4 nhóm chất'],
-      description: `Món ăn sáng/xế giàu năng lượng cho trẻ, sợi mềm dễ nhai nuốt, nước dùng đậm đà vừa miệng trẻ.`,
+      description: `Món ăn sáng dinh dưỡng khởi đầu ngày mới cho trẻ, sợi mềm dễ nhai nuốt, nước dùng ngọt thanh bổ dưỡng.`,
+    };
+  }
+
+  const isAfternoonSnack =
+    lower.includes('bữa xế') ||
+    lower.includes('ăn xế') ||
+    lower.includes('chè ') ||
+    lower.includes('bánh flan') ||
+    lower.includes('caramen') ||
+    lower.includes('sữa chua') ||
+    lower.includes('bông lan') ||
+    lower.includes('bánh quy') ||
+    lower.includes('súp bí đỏ') ||
+    lower.includes('súp bắp');
+
+  if (isAfternoonSnack) {
+    return {
+      category: 'Bữa xế (phụ)',
+      defaultMealSlot: 'afternoonSnack',
+      caloriesEstimate: 140,
+      suitableAge: 'Tất cả lứa tuổi',
+      nutritionTags: ['Bổ sung năng lượng chiều', 'Dễ hấp thu', 'Thanh ngọt dịu'],
+      description: `Món ăn nhẹ bữa xế chiều sau giấc ngủ trưa, giúp trẻ hồi phục năng lượng tham gia hoạt động chiều.`,
     };
   }
 

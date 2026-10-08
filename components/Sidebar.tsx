@@ -45,13 +45,6 @@ export const MODULE_ITEMS: ModuleItemConfig[] = [
     icon: Utensils,
     category: 'vsattp',
   },
-  {
-    id: 'samples',
-    label: 'Sổ lưu & Hủy mẫu 24h',
-    subLabel: 'Biên bản hủy mẫu thức ăn lưu đúng chuẩn',
-    icon: Layers,
-    category: 'vsattp',
-  },
 
   // Nhóm 2: Giáo Dục & Quản Lý Trẻ
   {

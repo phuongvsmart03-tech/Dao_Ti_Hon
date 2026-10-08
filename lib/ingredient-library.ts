@@ -30,7 +30,7 @@ export const DEFAULT_INGREDIENT_MAP: Record<string, DishIngredient[]> = {
       delivererName: 'Trần Đình Nam',
     },
     {
-      name: 'Dầu ăn đậu nành Simply',
+      name: 'Dầu ăn',
       type: 'kho',
       unit: 'lít',
       rawPerPortionGrams: 5,
@@ -258,7 +258,7 @@ export const DEFAULT_INGREDIENT_MAP: Record<string, DishIngredient[]> = {
       delivererName: 'Vũ Đức Thịnh',
     },
     {
-      name: 'Đường kính trắng Biên Hòa',
+      name: 'Đường kính',
       type: 'kho',
       unit: 'kg',
       rawPerPortionGrams: 10,
@@ -296,7 +296,7 @@ export const DEFAULT_INGREDIENT_MAP: Record<string, DishIngredient[]> = {
       delivererName: 'Vũ Đức Thịnh',
     },
     {
-      name: 'Đường kính trắng Biên Hòa',
+      name: 'Đường kính',
       type: 'kho',
       unit: 'kg',
       rawPerPortionGrams: 10,
@@ -334,7 +334,7 @@ export const DEFAULT_INGREDIENT_MAP: Record<string, DishIngredient[]> = {
       delivererName: 'Vũ Đức Thịnh',
     },
     {
-      name: 'Đường kính trắng Biên Hòa',
+      name: 'Đường kính',
       type: 'kho',
       unit: 'kg',
       rawPerPortionGrams: 3,
@@ -360,7 +360,7 @@ export const DEFAULT_INGREDIENT_MAP: Record<string, DishIngredient[]> = {
       delivererName: 'Vũ Đức Thịnh',
     },
     {
-      name: 'Sữa tươi tiệt trùng TH True Milk',
+      name: 'Sữa tươi',
       type: 'kho',
       unit: 'lít',
       rawPerPortionGrams: 50,
@@ -376,7 +376,7 @@ export const DEFAULT_INGREDIENT_MAP: Record<string, DishIngredient[]> = {
   // 5. Gia vị dùng chung hàng ngày
   'Gia vị bếp': [
     {
-      name: 'Nước mắm cá cơm Chinsu',
+      name: 'Nước mắm',
       type: 'kho',
       unit: 'lít',
       rawPerPortionGrams: 3,
@@ -510,7 +510,7 @@ export function getIngredientsForDish(dishName: string): DishIngredient[] {
       delivererName: 'Vũ Đức Thịnh',
     },
     {
-      name: 'Dầu ăn Simply',
+      name: 'Dầu ăn',
       type: 'kho',
       unit: 'lít',
       role: 'Gia vị',
@@ -523,7 +523,7 @@ export function getIngredientsForDish(dishName: string): DishIngredient[] {
       delivererName: 'Phạm Minh Hải',
     },
     {
-      name: 'Nước mắm Chinsu',
+      name: 'Nước mắm',
       type: 'kho',
       unit: 'lít',
       role: 'Gia vị',

@@ -376,6 +376,90 @@ export default function SettingsTab({
               />
             </div>
           </div>
+
+          {/* Cấu hình ngày học trong tuần & Nhiệt độ lưu mẫu thức ăn (Chuyển từ các nút mặc định vào đây) */}
+          <div className="p-3.5 bg-amber-50/70 border border-amber-200/90 rounded-xl space-y-3 mt-3">
+            <div className="text-xs font-bold text-amber-950 uppercase tracking-wide flex items-center justify-between">
+              <span>Cấu hình Ngày học trong tuần &amp; Nhiệt độ lưu mẫu thức ăn</span>
+              <span className="text-[10.5px] text-amber-800 font-semibold lowercase">áp dụng toàn hệ thống</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-800 mb-1">
+                  Nhiệt độ lưu mẫu thức ăn (Chuẩn QĐ 1246):
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={formData.sampleStorageTemp ?? '5°C'}
+                    onChange={(e) => setFormData({ ...formData, sampleStorageTemp: e.target.value })}
+                    className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 font-bold text-blue-900 bg-white"
+                    placeholder="VD: 5°C"
+                  />
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, sampleStorageTemp: '5°C' })}
+                      className="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                      title="Nhiệt độ tủ mát chuẩn theo yêu cầu khách hàng"
+                    >
+                      5°C
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, sampleStorageTemp: '-18°C' })}
+                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                      title="Tủ đông"
+                    >
+                      -18°C
+                    </button>
+                  </div>
+                </div>
+                <span className="text-[11px] text-slate-500 block mt-1">
+                  Yêu cầu của khách hàng: Cho phép chỉnh nhiệt độ lưu mẫu thành <strong>5°C</strong> (tự động cập nhật vào toàn bộ hồ sơ kiểm thực).
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-800 mb-1">
+                  Ngày học trong tuần mặc định của trường:
+                </label>
+                <div className="flex items-center gap-2 mt-1">
+                  <label className={`flex-1 inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                    formData.learnSaturday
+                      ? 'bg-amber-100/90 border-amber-300 text-amber-950 font-bold'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={!!formData.learnSaturday}
+                      onChange={(e) => setFormData({ ...formData, learnSaturday: e.target.checked })}
+                      className="rounded text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer"
+                    />
+                    <span>Học Thứ 7 (Bán trú T7)</span>
+                  </label>
+
+                  <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                    formData.learnSunday
+                      ? 'bg-rose-100/90 border-rose-300 text-rose-950 font-bold'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={!!formData.learnSunday}
+                      onChange={(e) => setFormData({ ...formData, learnSunday: e.target.checked })}
+                      className="rounded text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer"
+                    />
+                    <span>Chủ Nhật</span>
+                  </label>
+                </div>
+                <span className="text-[11px] text-slate-500 block mt-1">
+                  Mặc định áp dụng khi mở trích xuất hồ sơ kiểm thực theo tuần và theo tháng.
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* KHỐI 1: CẤU HÌNH NHÂN SỰ KÝ TÊN BIỂU MẪU (Theo yêu cầu Phòng GD&ĐT) */}

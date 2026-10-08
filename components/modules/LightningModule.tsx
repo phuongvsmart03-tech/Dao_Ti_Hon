@@ -169,16 +169,27 @@ export default function LightningModule({
   // Tự động nhận diện và đồng bộ tức thì khi Máy khác cập nhật Cấu hình mặc định
   useEffect(() => {
     if (defaultSettings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaultSettings.nurseryCount !== undefined) setNurseryCount(defaultSettings.nurseryCount);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaultSettings.kindergartenCount !== undefined) setKindergartenCount(defaultSettings.kindergartenCount);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaultSettings.nurseryPrice !== undefined) setNurseryPrice(defaultSettings.nurseryPrice);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaultSettings.kindergartenPrice !== undefined) setKindergartenPrice(defaultSettings.kindergartenPrice);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaultSettings.step1Time) setDefaultStep1Time(defaultSettings.step1Time);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaultSettings.step2Time) setDefaultStep2Time(defaultSettings.step2Time);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaultSettings.step3Time) setDefaultStep3Time(defaultSettings.step3Time);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaultSettings.sampleTime) setDefaultSampleTime(defaultSettings.sampleTime);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaultSettings.includeSaturday !== undefined) setIncludeSaturday(defaultSettings.includeSaturday);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaultSettings.includeSunday !== undefined) setIncludeSunday(defaultSettings.includeSunday);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaultSettings.dateMode) setDateMode(defaultSettings.dateMode);
     }
   }, [defaultSettings]);
@@ -202,6 +213,7 @@ export default function LightningModule({
       step2Time: s2T,
       step3Time: s3T,
       sampleTime: smT,
+      sampleStorageTemp: defaultSettings?.sampleStorageTemp || schoolInfo?.sampleStorageTemp || '5°C',
       dateMode,
       includeSaturday,
       includeSunday,
@@ -285,7 +297,9 @@ export default function LightningModule({
   // Tự động nhận diện khi máy khác cập nhật món hoặc sĩ số từng ngày
   useEffect(() => {
     if (lightningState) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (lightningState.customDishes) setCustomDishesByDate(lightningState.customDishes);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (lightningState.customCounts) setCustomCountsByDate(lightningState.customCounts);
     }
   }, [lightningState]);
@@ -332,12 +346,19 @@ export default function LightningModule({
       while (curr <= end && dates.length < 62) {
         const day = curr.getDay(); // 0: CN, 1: T2, ..., 6: T7
         let isIncluded = false;
-        if (day >= 1 && day <= 5) {
-          isIncluded = true; // Thứ 2 đến Thứ 6
-        } else if (day === 6 && includeSaturday) {
-          isIncluded = true; // Thứ 7 nếu bật
-        } else if (day === 0 && includeSunday) {
-          isIncluded = true; // Chủ Nhật nếu bật
+
+        if (dateMode === 'range') {
+          // Khi chọn khoảng thời gian (Từ ngày - Đến ngày): Không ẩn lịch T7 & CN, giữ đầy đủ để xuất in
+          isIncluded = true;
+        } else {
+          // Khi chọn Theo Tuần hoặc Theo Tháng: Dựa vào ô tích chọn có học Thứ 7 / Chủ Nhật hay không
+          if (day >= 1 && day <= 5) {
+            isIncluded = true; // Thứ 2 đến Thứ 6
+          } else if (day === 6 && includeSaturday) {
+            isIncluded = true; // Thứ 7 nếu tích chọn
+          } else if (day === 0 && includeSunday) {
+            isIncluded = true; // Chủ Nhật nếu tích chọn
+          }
         }
 
         if (isIncluded) {
@@ -349,7 +370,7 @@ export default function LightningModule({
     } catch {
       return [startDate];
     }
-  }, [startDate, endDate, includeSaturday, includeSunday]);
+  }, [startDate, endDate, dateMode, includeSaturday, includeSunday]);
 
   // Hàm chọn khoảng tuần
   const handleSelectWeek = (referenceDateStr: string, incSat = includeSaturday, incSun = includeSunday) => {
@@ -642,37 +663,37 @@ export default function LightningModule({
   // Bộ sinh hồ sơ tự động từ Menu (kết hợp tùy chỉnh món & suất ăn từng ngày)
   const generatedRecords = useMemo<InspectionPrintRecord[]>(() => {
     return dateList.map((dateStr, idx) => {
-      // Tìm menu tương ứng mặc định
+      // Tìm menu tương ứng mặc định (nếu không có thì để trống để người dùng tự chọn hoặc nạp)
       const menuForDay =
         menuItems.length > 0
           ? menuItems[idx % menuItems.length]
           : {
-              breakfast: 'Cháo gà hạt sen',
-              snackMorning: 'Sữa chua dâu tươi',
-              lunchMain: 'Thịt lợn rim nấm đông cô',
-              lunchSoup: 'Canh bí đỏ nấu tôm nõn',
-              lunchStaple: 'Cơm trắng gạo tám thơm',
-              lunchDessert: 'Bánh flan caramen + Sữa hạt óc chó',
-              afternoonSnack: 'Bánh flan caramen + Sữa hạt óc chó',
+              breakfast: '',
+              snackMorning: '',
+              lunchMain: '',
+              lunchSoup: '',
+              lunchStaple: '',
+              lunchDessert: '',
+              afternoonSnack: '',
             };
 
       // Món thực tế (kết hợp tuỳ chỉnh nếu có)
       const custom = customDishesByDate[dateStr] || {};
       const effectiveLunchMain =
-        custom.lunchMain !== undefined ? custom.lunchMain : menuForDay.lunchMain || 'Thịt lợn rim nấm đông cô';
+        custom.lunchMain !== undefined ? custom.lunchMain : (menuForDay.lunchMain || '');
       const effectiveLunchSoup =
-        custom.lunchSoup !== undefined ? custom.lunchSoup : menuForDay.lunchSoup || 'Canh bí đỏ nấu tôm nõn';
+        custom.lunchSoup !== undefined ? custom.lunchSoup : (menuForDay.lunchSoup || '');
       const effectiveLunchStaple =
-        custom.lunchStaple !== undefined ? custom.lunchStaple : menuForDay.lunchStaple || 'Cơm trắng gạo tám thơm';
+        custom.lunchStaple !== undefined ? custom.lunchStaple : (menuForDay.lunchStaple || '');
       const effectiveAfternoonSnack =
         custom.afternoonSnack !== undefined
           ? custom.afternoonSnack
-          : menuForDay.afternoonSnack || 'Bánh flan caramen + Sữa hạt óc chó';
+          : (menuForDay.afternoonSnack || '');
       const effectiveBreakfast =
-        custom.breakfast !== undefined ? custom.breakfast : menuForDay.breakfast || 'Cháo gà hạt sen';
+        custom.breakfast !== undefined ? custom.breakfast : (menuForDay.breakfast || '');
       const effectiveSnackMorning =
-        custom.snackMorning !== undefined ? custom.snackMorning : menuForDay.snackMorning || 'Sữa hạt dinh dưỡng';
-      const effectiveLunchDessert = custom.afternoonSnack || custom.lunchDessert || effectiveAfternoonSnack;
+        custom.snackMorning !== undefined ? custom.snackMorning : (menuForDay.snackMorning || '');
+      const effectiveLunchDessert = custom.afternoonSnack || custom.lunchDessert || effectiveAfternoonSnack || '';
 
       // Sĩ số riêng của từng ngày (nếu đã nhập trực tiếp)
       const dayCounts = customCountsByDate[dateStr] || {};
@@ -681,10 +702,10 @@ export default function LightningModule({
         dayCounts.kindergartenCount !== undefined ? dayCounts.kindergartenCount : kindergartenCount;
 
       // Gom toàn bộ nguyên liệu chuẩn hóa từ các món trong ngày
-      const ingMain = getStandardizedIngredientsForDish(effectiveLunchMain);
-      const ingSoup = getStandardizedIngredientsForDish(effectiveLunchSoup);
-      const ingStaple = getStandardizedIngredientsForDish(effectiveLunchStaple);
-      const ingSnack = getStandardizedIngredientsForDish(effectiveAfternoonSnack);
+      const ingMain = effectiveLunchMain ? getStandardizedIngredientsForDish(effectiveLunchMain) : [];
+      const ingSoup = effectiveLunchSoup ? getStandardizedIngredientsForDish(effectiveLunchSoup) : [];
+      const ingStaple = effectiveLunchStaple ? getStandardizedIngredientsForDish(effectiveLunchStaple) : [];
+      const ingSnack = effectiveAfternoonSnack ? getStandardizedIngredientsForDish(effectiveAfternoonSnack) : [];
       const ingMorningSnack = effectiveSnackMorning ? getStandardizedIngredientsForDish(effectiveSnackMorning) : [];
 
       const allRawIngs = [...ingMain, ...ingSoup, ...ingStaple, ...ingSnack, ...ingMorningSnack];
@@ -977,6 +998,48 @@ export default function LightningModule({
                     className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 bg-slate-50"
                   />
                 </div>
+
+                {/* Khi chọn Theo Tuần: nhảy ra các ô để tích chọn tuần đó có học T7 / CN không */}
+                <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-700 block">Tuần này có học:</span>
+                  <div className="flex items-center gap-2">
+                    <label className={`flex-1 inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                      includeSaturday
+                        ? 'bg-amber-50 border-amber-300 text-amber-900'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={includeSaturday}
+                        onChange={(e) => {
+                          const val = e.target.checked;
+                          handleToggleSaturday(val);
+                          handleSelectWeek(selectedWeekDate, val, includeSunday);
+                        }}
+                        className="rounded text-amber-600 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer"
+                      />
+                      <span>Học Thứ 7</span>
+                    </label>
+
+                    <label className={`inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                      includeSunday
+                        ? 'bg-rose-50 border-rose-300 text-rose-900'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={includeSunday}
+                        onChange={(e) => {
+                          const val = e.target.checked;
+                          handleToggleSunday(val);
+                          handleSelectWeek(selectedWeekDate, includeSaturday, val);
+                        }}
+                        className="rounded text-rose-600 focus:ring-rose-500 w-3.5 h-3.5 cursor-pointer"
+                      />
+                      <span>Chủ Nhật</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1016,42 +1079,42 @@ export default function LightningModule({
                     className="w-full text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 bg-slate-50"
                   />
                 </div>
+
+                {/* Khi chọn Theo Tháng: nhảy ra các ô để tích chọn tháng đó có học T7 / CN không */}
+                <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-700 block">Tháng này có học:</span>
+                  <div className="flex items-center gap-2">
+                    <label className={`flex-1 inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                      includeSaturday
+                        ? 'bg-amber-50 border-amber-300 text-amber-900'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={includeSaturday}
+                        onChange={(e) => handleToggleSaturday(e.target.checked)}
+                        className="rounded text-amber-600 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer"
+                      />
+                      <span>Học Thứ 7</span>
+                    </label>
+
+                    <label className={`inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                      includeSunday
+                        ? 'bg-rose-50 border-rose-300 text-rose-900'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={includeSunday}
+                        onChange={(e) => handleToggleSunday(e.target.checked)}
+                        className="rounded text-rose-600 focus:ring-rose-500 w-3.5 h-3.5 cursor-pointer"
+                      />
+                      <span>Chủ Nhật</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             )}
-
-            {/* Tùy chọn Ngày học trong tuần: Thứ 7 & Chủ Nhật */}
-            <div className="pt-2 border-t border-slate-100 space-y-1.5">
-              <span className="text-[11px] font-bold text-slate-700 block">Ngày học trong tuần:</span>
-              <div className="flex items-center gap-2">
-                <label className={`flex-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
-                  includeSaturday
-                    ? 'bg-amber-50 border-amber-300 text-amber-900'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}>
-                  <input
-                    type="checkbox"
-                    checked={includeSaturday}
-                    onChange={(e) => handleToggleSaturday(e.target.checked)}
-                    className="rounded text-amber-600 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer"
-                  />
-                  <span>Học Thứ 7 (Bán trú T7)</span>
-                </label>
-
-                <label className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
-                  includeSunday
-                    ? 'bg-rose-50 border-rose-300 text-rose-900'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}>
-                  <input
-                    type="checkbox"
-                    checked={includeSunday}
-                    onChange={(e) => handleToggleSunday(e.target.checked)}
-                    className="rounded text-rose-600 focus:ring-rose-500 w-3.5 h-3.5 cursor-pointer"
-                  />
-                  <span>Chủ Nhật</span>
-                </label>
-              </div>
-            </div>
           </div>
 
           {/* Hộp tóm tắt số ngày đã lọc */}
@@ -1064,7 +1127,9 @@ export default function LightningModule({
             </div>
             <div className="text-[10.5px] text-blue-800 flex items-center justify-between">
               <span>
-                {includeSunday
+                {dateMode === 'range'
+                  ? 'Khoảng ngày chọn lọc (Gồm Thứ 7/CN nếu nằm trong khoảng)'
+                  : includeSunday
                   ? 'Gồm cả Thứ 7 & Chủ Nhật'
                   : includeSaturday
                   ? 'Gồm Thứ 2 đến Thứ 7'
@@ -1083,15 +1148,6 @@ export default function LightningModule({
                 <DollarSign className="w-4 h-4 text-blue-600" />
                 <span>2. Đơn Giá &amp; Khẩu Phần</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsDefaultModalOpen(true)}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors cursor-pointer"
-                title="Cài đặt mặc định hệ thống cho toàn bộ các ngày"
-              >
-                <Cog className="w-3.5 h-3.5" />
-                <span>Cài Đặt Mặc Định</span>
-              </button>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-3">
@@ -1135,7 +1191,7 @@ export default function LightningModule({
 
             <div className="grid grid-cols-2 gap-3 mb-2">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Suất NT mặc định:</label>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Suất NT (Nhà trẻ):</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -1152,7 +1208,7 @@ export default function LightningModule({
                 </div>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Suất MG mặc định:</label>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Suất MG (Mẫu giáo):</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -1171,28 +1227,15 @@ export default function LightningModule({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleSaveAllAsDefault()}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-300 font-bold text-xs transition-colors cursor-pointer"
-                title="Lưu các giá trị này làm mặc định cho tất cả ngày mới và lần dùng sau"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                <span>Lưu Làm Mặc Định</span>
-              </button>
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/90 text-[11px] text-slate-600 space-y-1">
+            <div className="flex items-center justify-between font-semibold text-slate-800">
+              <span>Tổng sĩ số ăn ngày:</span>
+              <span className="font-mono text-blue-700 font-bold text-xs">{nurseryCount + kindergartenCount} suất bé</span>
             </div>
-
-            <div className="p-2 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[10.5px] text-blue-900 leading-relaxed flex items-center justify-between gap-1.5">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
-                <span>
-                  <strong>Tự động ghi nhớ:</strong> Sĩ số &amp; tiền ăn sẽ được lưu lại làm mặc định cho máy này.
-                </span>
-              </div>
-              <span className="text-[10px] font-mono text-blue-700 font-bold bg-blue-100/80 px-2 py-0.5 rounded-md shrink-0 border border-blue-300/60">
-                ✓ Đã lưu
+            <div className="flex items-center justify-between font-semibold text-slate-800">
+              <span>Tổng tiền ăn/ngày:</span>
+              <span className="font-mono text-emerald-700 font-bold text-xs">
+                {((nurseryCount * nurseryPrice) + (kindergartenCount * kindergartenPrice)).toLocaleString('vi-VN')} đ
               </span>
             </div>
           </div>
@@ -1481,7 +1524,9 @@ export default function LightningModule({
                               Sáng:
                             </span>
                             <span className="font-semibold text-slate-800 truncate text-xs">
-                              {item.dishes.breakfast || item.dishes.snackMorning || 'Cháo gà hạt sen'}
+                              {item.dishes.breakfast || item.dishes.snackMorning || (
+                                <span className="text-amber-800/60 italic font-normal">(Chưa chọn món - Nhấp để chọn)</span>
+                              )}
                             </span>
                           </div>
                           <span className="text-[10.5px] text-amber-700 font-bold opacity-80 group-hover/morning:opacity-100 transition-opacity flex items-center gap-0.5 whitespace-nowrap shrink-0 bg-white/70 px-2 py-0.5 rounded-md border border-amber-200">
@@ -1506,7 +1551,16 @@ export default function LightningModule({
                               Trưa:
                             </span>
                             <span className="font-bold text-slate-900 truncate text-xs">
-                              {item.dishes.lunchMain} <span className="text-slate-400 font-normal">+</span> <span className="text-slate-700 font-medium">{item.dishes.lunchSoup}</span>
+                              {item.dishes.lunchMain || item.dishes.lunchSoup ? (
+                                <>
+                                  {item.dishes.lunchMain || '(Chưa chọn món chính)'}
+                                  {item.dishes.lunchSoup && (
+                                    <> <span className="text-slate-400 font-normal">+</span> <span className="text-slate-700 font-medium">{item.dishes.lunchSoup}</span></>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="text-sky-800/60 italic font-normal">(Chưa chọn món trưa - Nhấp để chọn)</span>
+                              )}
                             </span>
                           </div>
                           <span className="text-[10.5px] text-sky-700 font-bold opacity-80 group-hover/lunch:opacity-100 transition-opacity flex items-center gap-0.5 whitespace-nowrap shrink-0 bg-white/70 px-2 py-0.5 rounded-md border border-sky-200">
@@ -1531,7 +1585,9 @@ export default function LightningModule({
                               Chiều:
                             </span>
                             <span className="font-semibold text-purple-950 truncate text-xs">
-                              {item.dishes.afternoonSnack || 'Bánh flan caramen + Sữa hạt óc chó'}
+                              {item.dishes.afternoonSnack || (
+                                <span className="text-purple-800/60 italic font-normal">(Chưa chọn món chiều - Nhấp để chọn)</span>
+                              )}
                             </span>
                           </div>
                           <span className="text-[10.5px] text-purple-700 font-bold opacity-80 group-hover/afternoon:opacity-100 transition-opacity flex items-center gap-0.5 whitespace-nowrap shrink-0 bg-white/70 px-2 py-0.5 rounded-md border border-purple-200">

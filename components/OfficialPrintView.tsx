@@ -1575,7 +1575,7 @@ export default function OfficialPrintView({
                         <td className="border border-black p-1.5 text-center">{rec.nurseryCount + rec.kindergartenCount}</td>
                         <td className="border border-black p-1.5 text-center font-semibold">150g (≥100g)</td>
                         <td className="border border-black p-1.5 text-center text-[9.5px]">Hộp Inox có nắp vô trùng</td>
-                        <td className="border border-black p-1.5 text-center font-semibold">2°C - 4°C</td>
+                        <td className="border border-black p-1.5 text-center font-semibold">{schoolInfo?.sampleStorageTemp || '5°C'}</td>
                         <td className="border border-black p-1.5 text-center">10:30 {dParts.day}/{dParts.month}</td>
                         <td className="border border-black p-1.5 text-center">10:30 {String(Number(dParts.day) + 1).padStart(2, '0')}/{dParts.month}</td>
                         <td className="border border-black p-1.5 text-center text-[10px]">Niêm phong kín</td>
@@ -1589,7 +1589,7 @@ export default function OfficialPrintView({
                         <td className="border border-black p-1.5 text-center">{rec.nurseryCount + rec.kindergartenCount}</td>
                         <td className="border border-black p-1.5 text-center font-semibold">150ml (≥100ml)</td>
                         <td className="border border-black p-1.5 text-center text-[9.5px]">Hộp Inox có nắp vô trùng</td>
-                        <td className="border border-black p-1.5 text-center font-semibold">2°C - 4°C</td>
+                        <td className="border border-black p-1.5 text-center font-semibold">{schoolInfo?.sampleStorageTemp || '5°C'}</td>
                         <td className="border border-black p-1.5 text-center">10:30 {dParts.day}/{dParts.month}</td>
                         <td className="border border-black p-1.5 text-center">10:30 {String(Number(dParts.day) + 1).padStart(2, '0')}/{dParts.month}</td>
                         <td className="border border-black p-1.5 text-center text-[10px]">Niêm phong kín</td>
@@ -1603,7 +1603,7 @@ export default function OfficialPrintView({
                         <td className="border border-black p-1.5 text-center">{rec.nurseryCount + rec.kindergartenCount}</td>
                         <td className="border border-black p-1.5 text-center font-semibold">150g (≥100g)</td>
                         <td className="border border-black p-1.5 text-center text-[9.5px]">Hộp Inox có nắp vô trùng</td>
-                        <td className="border border-black p-1.5 text-center font-semibold">2°C - 4°C</td>
+                        <td className="border border-black p-1.5 text-center font-semibold">{schoolInfo?.sampleStorageTemp || '5°C'}</td>
                         <td className="border border-black p-1.5 text-center">10:30 {dParts.day}/{dParts.month}</td>
                         <td className="border border-black p-1.5 text-center">10:30 {String(Number(dParts.day) + 1).padStart(2, '0')}/{dParts.month}</td>
                         <td className="border border-black p-1.5 text-center text-[10px]">Niêm phong kín</td>
@@ -1617,7 +1617,7 @@ export default function OfficialPrintView({
                         <td className="border border-black p-1.5 text-center">{rec.nurseryCount + rec.kindergartenCount}</td>
                         <td className="border border-black p-1.5 text-center font-semibold">120g/ml</td>
                         <td className="border border-black p-1.5 text-center text-[9.5px]">Hộp Inox có nắp vô trùng</td>
-                        <td className="border border-black p-1.5 text-center font-semibold">2°C - 4°C</td>
+                        <td className="border border-black p-1.5 text-center font-semibold">{schoolInfo?.sampleStorageTemp || '5°C'}</td>
                         <td className="border border-black p-1.5 text-center">14:15 {dParts.day}/{dParts.month}</td>
                         <td className="border border-black p-1.5 text-center">14:15 {String(Number(dParts.day) + 1).padStart(2, '0')}/{dParts.month}</td>
                         <td className="border border-black p-1.5 text-center text-[10px]">Niêm phong kín</td>

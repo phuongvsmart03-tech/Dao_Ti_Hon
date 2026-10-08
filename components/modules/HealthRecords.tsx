@@ -29,12 +29,14 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
-import { HealthRecord } from '@/types/preschool';
+import { HealthRecord, StudentRecord } from '@/types/preschool';
 import HistoricalDateFilterBar, { TimeFilterMode } from '@/components/HistoricalDateFilterBar';
 import { matchesTimeFilter, extractAvailableDates, formatDateVN } from '@/lib/utils';
+import { Users } from 'lucide-react';
 
 interface HealthRecordsProps {
   records: HealthRecord[];
+  students?: StudentRecord[];
   onSaveRecord: (record: HealthRecord) => void;
   onDeleteRecord: (id: string) => void;
   onPrintPreview: () => void;
@@ -65,6 +67,7 @@ export function calculateNutritionStatus(heightCm: number, weightKg: number): He
 
 export default function HealthRecords({
   records,
+  students = [],
   onSaveRecord,
   onDeleteRecord,
   onPrintPreview,
@@ -72,6 +75,7 @@ export default function HealthRecords({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedNutrition, setSelectedNutrition] = useState<string>('all');
+  const [syncStudentSuccessMsg, setSyncStudentSuccessMsg] = useState('');
 
   // Historical Time Filters
   const [timeFilterMode, setTimeFilterMode] = useState<TimeFilterMode>('all');
@@ -84,6 +88,63 @@ export default function HealthRecords({
   const [deletingRecord, setDeletingRecord] = useState<HealthRecord | null>(null);
   const [growthChartRecord, setGrowthChartRecord] = useState<HealthRecord | null>(null);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+
+  // Đồng bộ nhanh từ danh sách học sinh
+  const handleSyncFromStudents = () => {
+    if (!students || students.length === 0) return;
+    let addedCount = 0;
+    const today = new Date().toISOString().split('T')[0];
+
+    students.forEach((st) => {
+      const exists = records.some(
+        (r) =>
+          r.studentId === st.id ||
+          r.studentName.trim().toLowerCase() === st.fullName.trim().toLowerCase()
+      );
+      if (!exists) {
+        let h = 100;
+        let w = 15.5;
+        if (st.className.includes('Nhà Trẻ')) {
+          h = 86.5;
+          w = 12.2;
+        } else if (st.className.includes('Mầm')) {
+          h = 96.0;
+          w = 14.2;
+        } else if (st.className.includes('Chồi')) {
+          h = 103.5;
+          w = 16.5;
+        } else if (st.className.includes('Lá')) {
+          h = 111.0;
+          w = 19.0;
+        }
+
+        const autoNutr = calculateNutritionStatus(h, w);
+        const newRec: HealthRecord = {
+          id: `hr-${st.id}`,
+          studentId: st.id,
+          studentName: st.fullName,
+          className: st.className,
+          checkDate: today,
+          heightCm: h,
+          weightKg: w,
+          nutritionStatus: autoNutr,
+          vaccinationStatus: 'Đầy đủ theo độ tuổi',
+          generalHealth: 'Tốt',
+          doctorOrExaminer: 'Cán bộ Y tế học đường',
+          notes: st.allergiesOrDiet ? `Lưu ý ăn uống: ${st.allergiesOrDiet}` : 'Đồng bộ tự động từ danh sách lớp',
+        };
+        onSaveRecord(newRec);
+        addedCount++;
+      }
+    });
+
+    setSyncStudentSuccessMsg(
+      addedCount > 0
+        ? `Đã đồng bộ thành công ${addedCount} hồ sơ sức khỏe mới từ danh sách học sinh!`
+        : `Tất cả ${students.length} học sinh đều đã có hồ sơ sức khỏe đầy đủ!`
+    );
+    setTimeout(() => setSyncStudentSuccessMsg(''), 4500);
+  };
 
   const [formState, setFormState] = useState<Partial<HealthRecord>>({
     studentName: '',
@@ -328,6 +389,17 @@ export default function HealthRecords({
           </div>
 
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {students && students.length > 0 && (
+              <button
+                type="button"
+                onClick={handleSyncFromStudents}
+                title="Tự động đồng bộ và tạo hồ sơ theo dõi sức khỏe cho toàn bộ danh sách học sinh"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all cursor-pointer border border-emerald-400/40"
+              >
+                <Users className="w-4 h-4 text-emerald-100" />
+                <span>Đồng bộ từ Danh sách Học sinh ({students.length} bé)</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={handleSyncTurso}
@@ -363,6 +435,14 @@ export default function HealthRecords({
             </button>
           </div>
         </div>
+
+        {/* Thông báo kết quả đồng bộ học sinh */}
+        {syncStudentSuccessMsg && (
+          <div className="mt-3 p-3 bg-emerald-950/80 border border-emerald-500/60 text-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{syncStudentSuccessMsg}</span>
+          </div>
+        )}
 
         {/* Filter Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 mt-4 pt-4 border-t border-blue-800/60">
@@ -701,6 +781,39 @@ export default function HealthRecords({
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {students && students.length > 0 && !editingRecord && (
+                <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1">
+                  <label className="block text-xs font-bold text-blue-950">
+                    Chọn nhanh học sinh từ Danh Sách Lớp ({students.length} bé):
+                  </label>
+                  <select
+                    value={formState.studentId || ''}
+                    onChange={(e) => {
+                      const selectedSt = students.find((s) => s.id === e.target.value);
+                      if (selectedSt) {
+                        setFormState((prev) => ({
+                          ...prev,
+                          studentId: selectedSt.id,
+                          studentName: selectedSt.fullName,
+                          className: selectedSt.className,
+                        }));
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-blue-300 bg-white text-blue-900 focus:ring-2 focus:ring-blue-600"
+                  >
+                    <option value="">-- Bấm vào đây để chọn học sinh có sẵn --</option>
+                    {students.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.studentCode} • {st.fullName} ({st.className})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10.5px] text-blue-700">
+                    Hệ thống sẽ tự động điền họ tên và lớp học của bé đồng bộ với danh sách học sinh.
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Họ và tên trẻ</label>

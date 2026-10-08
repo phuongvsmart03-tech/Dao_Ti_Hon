@@ -48,9 +48,47 @@ const STORAGE_KEYS = {
   TRANSACTIONS: 'preschool_module_transactions',
   AUDIT_LOGS: 'preschool_audit_logs',
   APP_DEFAULTS: 'preschool_default_app_settings',
+  DELETED_IDS: 'preschool_deleted_ids',
 };
 
 export const DEFAULT_PIN = '150520';
+
+export function getDeletedIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.DELETED_IDS);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function recordDeletedId(id: string): void {
+  if (typeof window === 'undefined' || !id) return;
+  try {
+    const ids = getDeletedIds();
+    ids.add(id);
+    localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify(Array.from(ids)));
+  } catch {
+    // ignore
+  }
+}
+
+export function isDeletedId(id: string): boolean {
+  if (typeof window === 'undefined' || !id) return false;
+  return getDeletedIds().has(id);
+}
+
+export function clearDeletedIds(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(STORAGE_KEYS.DELETED_IDS);
+  } catch {
+    // ignore
+  }
+}
 
 export interface AppDefaultSettings {
   nurseryCount: number;
@@ -61,6 +99,7 @@ export interface AppDefaultSettings {
   step2Time: string;
   step3Time: string;
   sampleTime: string;
+  sampleStorageTemp?: string;
   dateMode: 'range' | 'week' | 'month';
   includeSaturday: boolean;
   includeSunday: boolean;
@@ -75,6 +114,7 @@ export const DEFAULT_APP_SETTINGS: AppDefaultSettings = {
   step2Time: '09:30',
   step3Time: '10:30',
   sampleTime: '10:45',
+  sampleStorageTemp: '5°C',
   dateMode: 'range',
   includeSaturday: false,
   includeSunday: false,
@@ -220,16 +260,26 @@ export function saveSchoolInfo(info: SchoolInfo): void {
   }
 }
 
-// Helper to load generic array or fallback
+// Helper to load generic array or fallback, strictly filtering out any tombstoned/deleted records
 function loadData<T>(key: string, fallback: T[]): T[] {
   if (typeof window === 'undefined') return fallback;
   try {
+    const isCleared = localStorage.getItem('preschool_data_cleared') === 'true';
     const saved = localStorage.getItem(key);
+    const deletedIds = getDeletedIds();
     if (!saved) {
-      localStorage.setItem(key, JSON.stringify(fallback));
-      return fallback;
+      if (isCleared) {
+        localStorage.setItem(key, JSON.stringify([]));
+        return [];
+      }
+      const filteredFallback = fallback.filter((item: any) => !item?.id || !deletedIds.has(item.id));
+      localStorage.setItem(key, JSON.stringify(filteredFallback));
+      return filteredFallback;
     }
-    return JSON.parse(saved);
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return fallback;
+    // Always filter out any deleted IDs so deleted records never resurrect
+    return parsed.filter((item: any) => !item?.id || !deletedIds.has(item.id));
   } catch {
     return fallback;
   }
@@ -360,6 +410,10 @@ export const moduleStorage = {
   },
 
   seedAllDefault: () => {
+    clearDeletedIds();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('preschool_data_cleared');
+    }
     saveSchoolInfo(initialSchoolInfo);
     moduleStorage.saveStep1(initialStep1Records);
     moduleStorage.saveStep2(initialStep2Records);
@@ -375,6 +429,7 @@ export const moduleStorage = {
   },
 
   clearAllData: () => {
+    clearDeletedIds();
     moduleStorage.saveStep1([]);
     moduleStorage.saveStep2([]);
     moduleStorage.saveStep3([]);
@@ -387,6 +442,7 @@ export const moduleStorage = {
     moduleStorage.saveSalaries([]);
     moduleStorage.saveTransactions([]);
     if (typeof window !== 'undefined') {
+      localStorage.setItem('preschool_data_cleared', 'true');
       localStorage.removeItem('lightning_custom_dishes');
       localStorage.removeItem('lightning_custom_counts');
       localStorage.removeItem('preschool_custom_attendance');

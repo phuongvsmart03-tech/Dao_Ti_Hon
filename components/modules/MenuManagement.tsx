@@ -28,6 +28,9 @@ import {
   BookOpen,
   Check,
   ExternalLink,
+  Sunrise,
+  Sun,
+  Sunset,
 } from 'lucide-react';
 import { DishItem, DishCategory, MenuItem, SchoolInfo } from '@/types/preschool';
 import {
@@ -41,6 +44,47 @@ import {
 import { classifyDish } from '@/lib/dish-classifier';
 import { getStandardizedIngredientsForDish } from '@/lib/dish-database';
 import { DishIngredient } from '@/types/lightning';
+
+export const STANDARD_CLEAN_INGREDIENTS = [
+  'Đường kính',
+  'Dầu ăn',
+  'Nước mắm',
+  'Muối I-ốt',
+  'Hạt nêm',
+  'Thịt lợn nạc',
+  'Thịt heo xay',
+  'Thịt bò thăn',
+  'Thịt gà ta',
+  'Cá Basa fillet',
+  'Tôm thẻ tươi',
+  'Tôm tươi băm',
+  'Trứng gà ta',
+  'Đậu phụ non',
+  'Gạo tẻ',
+  'Bánh phở tươi',
+  'Bún tươi',
+  'Bánh hỏi tươi',
+  'Khoai tây',
+  'Cà rốt',
+  'Bí đỏ',
+  'Bí xanh (Bí đao)',
+  'Cà chua',
+  'Rau ngót',
+  'Rau mồng tơi',
+  'Rau cải xanh',
+  'Cải bó xôi',
+  'Hành lá',
+  'Hành hoa tươi',
+  'Ngò rí',
+  'Sữa tươi',
+  'Sữa chua',
+  'Chuối tiêu',
+  'Đu đủ chín',
+  'Dưa hấu',
+  'Cam sành',
+  'Xoài chín',
+  'Thanh long',
+];
 
 interface MenuManagementProps {
   items?: MenuItem[];
@@ -56,9 +100,12 @@ interface MenuManagementProps {
 
 export default function MenuManagement({
   studentsCount = 80,
+  schoolInfo,
 }: MenuManagementProps) {
   // Kho món ăn chính từ localStorage
   const [dishLibrary, setDishLibrary] = useState<DishItem[]>(() => getStoredDishLibrary());
+  // Bộ lọc 3 bữa ăn cơ sở: Sáng - Trưa - Xế
+  const [selectedMealFilter, setSelectedMealFilter] = useState<'all' | 'breakfast' | 'lunch' | 'snack'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string>('all');
@@ -70,6 +117,77 @@ export default function MenuManagement({
   const [deletingDish, setDeletingDish] = useState<DishItem | null>(null);
   const [confirmRestoreModal, setConfirmRestoreModal] = useState(false);
   const [showRestoreSuccess, setShowRestoreSuccess] = useState(false);
+
+  // BOM Editing State
+  const [editableBOM, setEditableBOM] = useState<any[]>([]);
+  const [bomSuccessMessage, setBomSuccessMessage] = useState(false);
+  const [bomSaving, setBomSaving] = useState(false);
+
+  // Thống kê số lượng món theo 3 bữa của cơ sở
+  const breakfastCount = useMemo(() => {
+    return dishLibrary.filter(
+      (d) => d.category === 'Bữa sáng' || d.category === 'Bữa sáng & Bữa xế' || d.defaultMealSlot === 'breakfast'
+    ).length;
+  }, [dishLibrary]);
+
+  const lunchCount = useMemo(() => {
+    return dishLibrary.filter(
+      (d) =>
+        d.category === 'Món mặn chính' ||
+        d.category === 'Món canh' ||
+        d.category === 'Món ăn kèm & Cơm' ||
+        d.defaultMealSlot === 'lunchMain' ||
+        d.defaultMealSlot === 'lunchSoup' ||
+        d.defaultMealSlot === 'lunchStaple'
+    ).length;
+  }, [dishLibrary]);
+
+  const snackCount = useMemo(() => {
+    return dishLibrary.filter(
+      (d) =>
+        d.category === 'Bữa xế (phụ)' ||
+        d.category === 'Tráng miệng' ||
+        d.category === 'Đồ uống & Nước ép' ||
+        d.defaultMealSlot === 'afternoonSnack' ||
+        d.defaultMealSlot === 'snackMorning' ||
+        d.defaultMealSlot === 'lunchDessert'
+    ).length;
+  }, [dishLibrary]);
+
+  // Sync editable BOM when modal opens
+  useEffect(() => {
+    if (selectedDishForBOM) {
+      const initial = resolveDishIngredients(selectedDishForBOM);
+      setEditableBOM(JSON.parse(JSON.stringify(initial)));
+      setBomSuccessMessage(false);
+    } else {
+      setEditableBOM([]);
+      setBomSuccessMessage(false);
+    }
+  }, [selectedDishForBOM]);
+
+  // Options for suppliers and producers
+  const supplierOptions = useMemo(() => {
+    const list: string[] = [];
+    if (schoolInfo?.meatSupplierName) list.push(schoolInfo.meatSupplierName);
+    if (schoolInfo?.vegSupplierName) list.push(schoolInfo.vegSupplierName);
+    if (schoolInfo?.seafoodSupplierName) list.push(schoolInfo.seafoodSupplierName);
+    if (schoolInfo?.drySupplierName) list.push(schoolInfo.drySupplierName);
+    if (schoolInfo?.dryProducerName) list.push(schoolInfo.dryProducerName);
+
+    const standardProviders = [
+      'Cơ sở sản xuất & giết mổ thịt an toàn',
+      'Hợp tác xã Rau an toàn & Nông sản sạch',
+      'Công ty CP Thủy hải sản sạch',
+      'Nhà máy Chế biến gia vị & Đồ khô',
+      'Công ty Cổ phần Sữa Việt Nam',
+      'Cơ sở chế biến thực phẩm chuẩn hóa',
+    ];
+    standardProviders.forEach((p) => {
+      if (!list.includes(p)) list.push(p);
+    });
+    return list;
+  }, [schoolInfo]);
 
   // New Dish State
   const [newDish, setNewDish] = useState<Partial<DishItem>>({
@@ -83,15 +201,16 @@ export default function MenuManagement({
   });
   const [newTagInput, setNewTagInput] = useState('');
 
-  // Danh mục phân loại chuẩn cơ sở
+  // Danh mục phân loại chuẩn cơ sở đáp ứng đầy đủ 3 bữa: Sáng, Trưa (chính), Xế (phụ)
   const categories: { id: string; label: string; icon: any; color: string }[] = [
     { id: 'all', label: 'Tất cả kho món', icon: Utensils, color: 'bg-slate-800 text-white' },
-    { id: 'Món mặn chính', label: 'Món mặn chính (8 món)', icon: Utensils, color: 'bg-amber-600 text-white' },
-    { id: 'Món canh', label: 'Món canh (6 món)', icon: Soup, color: 'bg-emerald-600 text-white' },
-    { id: 'Bữa sáng & Bữa xế', label: 'Sáng & Xế (6 món)', icon: Coffee, color: 'bg-blue-600 text-white' },
-    { id: 'Đồ uống & Nước ép', label: 'Đồ uống (5 món)', icon: GlassWater, color: 'bg-cyan-600 text-white' },
-    { id: 'Tráng miệng', label: 'Tráng miệng (3 món)', icon: Apple, color: 'bg-rose-600 text-white' },
-    { id: 'Món ăn kèm & Cơm', label: 'Cơm & Nước (2 món)', icon: Layers, color: 'bg-indigo-600 text-white' },
+    { id: 'Bữa sáng', label: 'Bữa sáng (5 món)', icon: Sunrise, color: 'bg-orange-600 text-white' },
+    { id: 'Món mặn chính', label: 'Trưa - Món mặn (8 món)', icon: Utensils, color: 'bg-amber-600 text-white' },
+    { id: 'Món canh', label: 'Trưa - Món canh (6 món)', icon: Soup, color: 'bg-emerald-600 text-white' },
+    { id: 'Bữa xế (phụ)', label: 'Bữa xế phụ (5 món)', icon: Sunset, color: 'bg-purple-600 text-white' },
+    { id: 'Đồ uống & Nước ép', label: 'Đồ uống & Nước ép', icon: GlassWater, color: 'bg-cyan-600 text-white' },
+    { id: 'Tráng miệng', label: 'Tráng miệng', icon: Apple, color: 'bg-rose-600 text-white' },
+    { id: 'Món ăn kèm & Cơm', label: 'Cơm & Ăn kèm', icon: Layers, color: 'bg-indigo-600 text-white' },
   ];
 
   // Trích xuất tất cả các tag dinh dưỡng có trong kho món
@@ -103,7 +222,7 @@ export default function MenuManagement({
     return Array.from(tagsSet);
   }, [dishLibrary]);
 
-  // Bộ lọc danh sách món ăn
+  // Bộ lọc danh sách món ăn kết hợp 3 bữa + Danh mục + Từ khóa
   const filteredDishes = useMemo(() => {
     return dishLibrary.filter((dish) => {
       const matchSearch =
@@ -112,15 +231,42 @@ export default function MenuManagement({
         dish.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         dish.nutritionTags?.some((t) => t.toLowerCase().includes(searchTerm.toLowerCase()));
 
+      let matchMeal = true;
+      if (selectedMealFilter === 'breakfast') {
+        matchMeal =
+          dish.category === 'Bữa sáng' ||
+          dish.category === 'Bữa sáng & Bữa xế' ||
+          dish.defaultMealSlot === 'breakfast';
+      } else if (selectedMealFilter === 'lunch') {
+        matchMeal =
+          dish.category === 'Món mặn chính' ||
+          dish.category === 'Món canh' ||
+          dish.category === 'Món ăn kèm & Cơm' ||
+          dish.defaultMealSlot === 'lunchMain' ||
+          dish.defaultMealSlot === 'lunchSoup' ||
+          dish.defaultMealSlot === 'lunchStaple';
+      } else if (selectedMealFilter === 'snack') {
+        matchMeal =
+          dish.category === 'Bữa xế (phụ)' ||
+          dish.category === 'Tráng miệng' ||
+          dish.category === 'Đồ uống & Nước ép' ||
+          dish.defaultMealSlot === 'afternoonSnack' ||
+          dish.defaultMealSlot === 'snackMorning' ||
+          dish.defaultMealSlot === 'lunchDessert';
+      }
+
       const matchCategory =
-        selectedCategory === 'all' || dish.category === selectedCategory;
+        selectedCategory === 'all' ||
+        dish.category === selectedCategory ||
+        (selectedCategory === 'Bữa sáng' && (dish.category === 'Bữa sáng & Bữa xế' || dish.defaultMealSlot === 'breakfast')) ||
+        (selectedCategory === 'Bữa xế (phụ)' && (dish.category === 'Bữa xế (phụ)' || dish.defaultMealSlot === 'afternoonSnack'));
 
       const matchTag =
         selectedTag === 'all' || dish.nutritionTags?.includes(selectedTag);
 
-      return matchSearch && matchCategory && matchTag;
+      return matchSearch && matchMeal && matchCategory && matchTag;
     });
-  }, [dishLibrary, searchTerm, selectedCategory, selectedTag]);
+  }, [dishLibrary, searchTerm, selectedMealFilter, selectedCategory, selectedTag]);
 
   // AI Auto-Analyze Dish Name
   const handleAiAnalyzeDish = async () => {
@@ -273,13 +419,114 @@ export default function MenuManagement({
         fat: Math.round(((ing.lipidPer100g || 0) * (ing.rawGramsPerPortion || 30) / 100) * 10) / 10,
         carbs: Math.round(((ing.glucidPer100g || 0) * (ing.rawGramsPerPortion || 30) / 100) * 10) / 10,
         calories: Math.round(((ing.caloriesPer100g || 50) * (ing.rawGramsPerPortion || 30) / 100) * 10) / 10,
-        supplierName: ing.supplierName || 'Vựa thực phẩm sạch',
-        producerName: '',
-        supplierAddress: '',
-        producerAddress: '',
+        supplierName: ing.supplierName || schoolInfo?.meatSupplierName || 'Vựa thực phẩm sạch',
+        producerName: ing.producerName || ing.supplierName || 'Cơ sở sản xuất chuẩn hóa',
+        supplierAddress: ing.supplierAddress || '',
+        producerAddress: ing.producerAddress || '',
       }));
     }
     return getStandardizedIngredientsForDish(d.name, d.category);
+  };
+
+  // Các thao tác điều chỉnh bảng định lượng BOM
+  const handleUpdateBOMRow = (index: number, patch: Partial<any>) => {
+    setEditableBOM((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+  };
+
+  const handleAddBOMRow = () => {
+    setEditableBOM((prev) => [
+      ...prev,
+      {
+        name: 'Đường kính',
+        type: 'kho',
+        unit: 'kg',
+        role: 'Gia vị',
+        rawPerPortionGrams: 5,
+        cleanPerPortionGrams: 5,
+        wasteRate: 0,
+        pricePerKg: 25000,
+        protein: 0,
+        fat: 0,
+        carbs: 5,
+        calories: 20,
+        supplierName: schoolInfo?.drySupplierName || 'Nhà máy Chế biến gia vị & Đồ khô',
+        producerName: schoolInfo?.dryProducerName || 'Nhà máy Chế biến gia vị & Đồ khô',
+        supplierAddress: schoolInfo?.drySupplierAddress || '',
+        producerAddress: schoolInfo?.dryProducerAddress || '',
+      },
+    ]);
+  };
+
+  const handleRemoveBOMRow = (index: number) => {
+    setEditableBOM((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleResetBOMToDefault = () => {
+    if (!selectedDishForBOM) return;
+    const defaultIngredients = getStandardizedIngredientsForDish(selectedDishForBOM.name, selectedDishForBOM.category);
+    setEditableBOM(JSON.parse(JSON.stringify(defaultIngredients)));
+  };
+
+  const handleSaveBOM = async () => {
+    if (!selectedDishForBOM) return;
+    setBomSaving(true);
+    try {
+      const totalCalories = editableBOM.reduce((sum, item) => sum + (Number(item.calories) || 0), 0);
+
+      const convertedIngredients: any[] = editableBOM.map((item, idx) => ({
+        id: `ing-${selectedDishForBOM.id}-${idx}-${Date.now()}`,
+        name: item.name?.trim() || 'Nguyên liệu',
+        type: item.type === 'tuoi_song' ? 'tuoi_song' : 'kho',
+        unit: item.unit || 'kg',
+        category: item.type === 'tuoi_song' ? 'Thịt cá tươi sống' : 'Gia vị & dầu mỡ',
+        rawGramsPerPortion: Number(item.rawPerPortionGrams) || 0,
+        cleanGramsPerPortion: Number(item.cleanPerPortionGrams) || 0,
+        wasteRatePercent: Number(item.wasteRate) || 0,
+        pricePerKg: Number(item.pricePerKg) || 0,
+        caloriesPer100g: item.rawPerPortionGrams > 0 ? Math.round(((Number(item.calories) || 0) / item.rawPerPortionGrams) * 100) : 0,
+        proteinPer100g: item.rawPerPortionGrams > 0 ? Math.round(((Number(item.protein) || 0) / item.rawPerPortionGrams) * 100 * 10) / 10 : 0,
+        lipidPer100g: item.rawPerPortionGrams > 0 ? Math.round(((Number(item.fat) || 0) / item.rawPerPortionGrams) * 100 * 10) / 10 : 0,
+        glucidPer100g: item.rawPerPortionGrams > 0 ? Math.round(((Number(item.carbs) || 0) / item.rawPerPortionGrams) * 100 * 10) / 10 : 0,
+        supplierName: item.supplierName?.trim() || schoolInfo?.meatSupplierName || 'Cơ sở chuẩn hóa',
+        producerName: item.producerName?.trim() || item.supplierName?.trim() || 'Cơ sở sản xuất chuẩn hóa',
+        supplierAddress: item.supplierAddress || '',
+        producerAddress: item.producerAddress || '',
+      }));
+
+      const updatedDish: DishItem = {
+        ...selectedDishForBOM,
+        caloriesEstimate: Math.round(totalCalories) || selectedDishForBOM.caloriesEstimate || 150,
+        ingredients: convertedIngredients,
+      };
+
+      const updatedLibrary = dishLibrary.map((d) => (d.id === selectedDishForBOM.id ? updatedDish : d));
+      setDishLibrary(updatedLibrary);
+      saveDishLibrary(updatedLibrary);
+      setSelectedDishForBOM(updatedDish);
+
+      // Đồng bộ ngay lập tức lên server và broadcast qua BroadcastChannel
+      await syncAllDishesToCloud(updatedLibrary);
+
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        try {
+          const bc = new BroadcastChannel('mamnon_sync_channel');
+          bc.postMessage({ type: 'DISH_BOM_UPDATED', dishId: updatedDish.id });
+          bc.close();
+        } catch {}
+      }
+
+      setBomSuccessMessage(true);
+      setTimeout(() => setBomSuccessMessage(false), 3500);
+    } catch (e) {
+      console.error('Lỗi khi lưu bảng định lượng BOM:', e);
+      alert('Có lỗi khi lưu định lượng BOM. Vui lòng thử lại!');
+    } finally {
+      setBomSaving(false);
+    }
   };
 
   return (
@@ -425,14 +672,15 @@ export default function MenuManagement({
               </div>
 
               <div className="md:col-span-3">
-                <label className="block text-xs font-bold text-slate-800 mb-1">Phân loại món</label>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Phân loại món &amp; Bữa ăn</label>
                 <select
                   value={newDish.category}
                   onChange={(e) => {
                     const cat = e.target.value as DishCategory;
                     let slot: any = 'lunchMain';
-                    if (cat === 'Món canh') slot = 'lunchSoup';
-                    else if (cat === 'Bữa sáng & Bữa xế') slot = 'breakfast';
+                    if (cat === 'Bữa sáng') slot = 'breakfast';
+                    else if (cat === 'Bữa xế (phụ)') slot = 'afternoonSnack';
+                    else if (cat === 'Món canh') slot = 'lunchSoup';
                     else if (cat === 'Tráng miệng') slot = 'lunchDessert';
                     else if (cat === 'Đồ uống & Nước ép') slot = 'snackMorning';
                     else if (cat === 'Món ăn kèm & Cơm') slot = 'lunchStaple';
@@ -440,12 +688,13 @@ export default function MenuManagement({
                   }}
                   className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 bg-white"
                 >
-                  <option value="Món mặn chính">Món mặn chính</option>
-                  <option value="Món canh">Món canh</option>
-                  <option value="Bữa sáng & Bữa xế">Bữa sáng & Bữa xế</option>
-                  <option value="Đồ uống & Nước ép">Đồ uống & Nước ép</option>
-                  <option value="Tráng miệng">Tráng miệng</option>
-                  <option value="Món ăn kèm & Cơm">Món ăn kèm & Cơm</option>
+                  <option value="Bữa sáng">1. Bữa Sáng (Ăn sáng dinh dưỡng)</option>
+                  <option value="Món mặn chính">2. Bữa Trưa (chính) - Món mặn</option>
+                  <option value="Món canh">2. Bữa Trưa (chính) - Món canh</option>
+                  <option value="Bữa xế (phụ)">3. Bữa Xế (phụ) (Ăn nhẹ chiều)</option>
+                  <option value="Đồ uống & Nước ép">Đồ uống &amp; Sữa hạt</option>
+                  <option value="Tráng miệng">Tráng miệng &amp; Hoa quả</option>
+                  <option value="Món ăn kèm & Cơm">Món ăn kèm &amp; Cơm dẻo</option>
                 </select>
               </div>
 
@@ -577,6 +826,76 @@ export default function MenuManagement({
           </div>
         </div>
 
+        {/* Thanh chọn 3 bữa chuẩn cơ sở: Bữa Sáng - Bữa Trưa (chính) - Bữa Xế (phụ) */}
+        <div className="p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/80 flex items-center gap-1.5 overflow-x-auto">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider pl-2.5 pr-1 shrink-0">
+            Khẩu phần 3 bữa:
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedMealFilter('all');
+              setSelectedCategory('all');
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+              selectedMealFilter === 'all'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-300 font-extrabold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Utensils className="w-3.5 h-3.5 text-slate-600" />
+            <span>Tất cả kho món ({dishLibrary.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedMealFilter('breakfast');
+              setSelectedCategory('all');
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+              selectedMealFilter === 'breakfast'
+                ? 'bg-orange-500 text-white shadow-xs border border-orange-600 font-extrabold'
+                : 'text-orange-950 bg-orange-50/80 hover:bg-orange-100 border border-orange-200/60'
+            }`}
+          >
+            <Sunrise className="w-3.5 h-3.5" />
+            <span>1. Bữa Sáng ({breakfastCount} món)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedMealFilter('lunch');
+              setSelectedCategory('all');
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+              selectedMealFilter === 'lunch'
+                ? 'bg-blue-600 text-white shadow-xs border border-blue-700 font-extrabold'
+                : 'text-blue-950 bg-blue-50/80 hover:bg-blue-100 border border-blue-200/60'
+            }`}
+          >
+            <Sun className="w-3.5 h-3.5" />
+            <span>2. Bữa Trưa (chính) ({lunchCount} món)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedMealFilter('snack');
+              setSelectedCategory('all');
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+              selectedMealFilter === 'snack'
+                ? 'bg-purple-600 text-white shadow-xs border border-purple-700 font-extrabold'
+                : 'text-purple-950 bg-purple-50/80 hover:bg-purple-100 border border-purple-200/60'
+            }`}
+          >
+            <Sunset className="w-3.5 h-3.5" />
+            <span>3. Bữa Xế (phụ) ({snackCount} món)</span>
+          </button>
+        </div>
+
         {/* Category Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
           {categories.map((cat) => {
@@ -649,13 +968,36 @@ export default function MenuManagement({
           const ingredients = resolveDishIngredients(dish);
           const isCoreDish = MASTER_SEED_BACKUP_DISHES.some((m) => m.name === dish.name);
 
-          // Get category badge color
+          // Get category badge color & meal label
           let catBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300';
-          if (dish.category === 'Món canh') catBadgeClass = 'bg-emerald-100 text-emerald-900 border-emerald-300';
-          else if (dish.category === 'Bữa sáng & Bữa xế') catBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300';
-          else if (dish.category === 'Đồ uống & Nước ép') catBadgeClass = 'bg-cyan-100 text-cyan-900 border-cyan-300';
-          else if (dish.category === 'Tráng miệng') catBadgeClass = 'bg-rose-100 text-rose-900 border-rose-300';
-          else if (dish.category === 'Món ăn kèm & Cơm') catBadgeClass = 'bg-indigo-100 text-indigo-900 border-indigo-300';
+          let mealLabel = 'Bữa trưa (chính)';
+          let mealBadgeClass = 'bg-blue-50 text-blue-800 border-blue-200';
+
+          if (dish.category === 'Bữa sáng' || dish.category === 'Bữa sáng & Bữa xế' || dish.defaultMealSlot === 'breakfast') {
+            catBadgeClass = 'bg-orange-100 text-orange-900 border-orange-300';
+            mealLabel = '1. Bữa Sáng';
+            mealBadgeClass = 'bg-orange-50 text-orange-800 border-orange-200';
+          } else if (dish.category === 'Bữa xế (phụ)' || dish.defaultMealSlot === 'afternoonSnack') {
+            catBadgeClass = 'bg-purple-100 text-purple-900 border-purple-300';
+            mealLabel = '3. Bữa Xế (phụ)';
+            mealBadgeClass = 'bg-purple-50 text-purple-800 border-purple-200';
+          } else if (dish.category === 'Món canh') {
+            catBadgeClass = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+            mealLabel = '2. Trưa (Canh)';
+            mealBadgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+          } else if (dish.category === 'Đồ uống & Nước ép') {
+            catBadgeClass = 'bg-cyan-100 text-cyan-900 border-cyan-300';
+            mealLabel = 'Đồ uống xế';
+            mealBadgeClass = 'bg-cyan-50 text-cyan-800 border-cyan-200';
+          } else if (dish.category === 'Tráng miệng') {
+            catBadgeClass = 'bg-rose-100 text-rose-900 border-rose-300';
+            mealLabel = 'Tráng miệng';
+            mealBadgeClass = 'bg-rose-50 text-rose-800 border-rose-200';
+          } else if (dish.category === 'Món ăn kèm & Cơm') {
+            catBadgeClass = 'bg-indigo-100 text-indigo-900 border-indigo-300';
+            mealLabel = '2. Trưa (Cơm)';
+            mealBadgeClass = 'bg-indigo-50 text-indigo-800 border-indigo-200';
+          }
 
           return (
             <div
@@ -667,7 +1009,10 @@ export default function MenuManagement({
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${catBadgeClass}`}>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${mealBadgeClass}`}>
+                        {mealLabel}
+                      </span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${catBadgeClass}`}>
                         {dish.category}
                       </span>
                       {isCoreDish ? (
@@ -744,7 +1089,7 @@ export default function MenuManagement({
                   className="text-xs font-bold text-blue-700 hover:text-blue-900 flex items-center gap-1 hover:underline cursor-pointer"
                 >
                   <Scale className="w-3.5 h-3.5" />
-                  <span>Xem định lượng BOM</span>
+                  <span>Sửa định lượng BOM &amp; NCC</span>
                 </button>
 
                 <div className="flex items-center gap-1">
@@ -788,19 +1133,24 @@ export default function MenuManagement({
         </div>
       )}
 
-      {/* 5. Modal Xem Định Lượng BOM Chi Tiết */}
+      {/* 5. Modal Chỉnh Sửa Định Lượng BOM & Nhà Cung Cấp Chi Tiết */}
       {selectedDishForBOM && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in-50">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in-50">
+            {/* Modal Header */}
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <ChefHat className="w-5 h-5 text-amber-400" />
                 <div>
-                  <h3 className="text-base font-bold text-white">
-                    Bóc tách định lượng & Nhà cung cấp: {selectedDishForBOM.name}
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    Bóc tách định lượng BOM &amp; Nhà cung cấp: <span className="text-amber-300 font-extrabold">{selectedDishForBOM.name}</span>
                   </h3>
                   <span className="text-xs text-slate-300">
-                    Phân loại: {selectedDishForBOM.category} | Ước tính {selectedDishForBOM.caloriesEstimate || 150} Kcal/suất
+                    Phân loại: <span className="font-semibold text-white">{selectedDishForBOM.category}</span> | Ước tính{' '}
+                    <span className="font-mono font-bold text-amber-300">
+                      {editableBOM.reduce((sum, item) => sum + (Number(item.calories) || 0), 0)}
+                    </span>{' '}
+                    Kcal/suất ({editableBOM.length} thành phần)
                   </span>
                 </div>
               </div>
@@ -808,77 +1158,246 @@ export default function MenuManagement({
                 type="button"
                 onClick={() => setSelectedDishForBOM(null)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
+                title="Đóng modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 overflow-y-auto space-y-4">
-              <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            {/* Modal Body */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
+              {/* Thông báo lưu thành công */}
+              {bomSuccessMessage && (
+                <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center gap-2.5 text-emerald-900 text-xs font-bold animate-in fade-in-50">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Đã lưu thành công định lượng BOM &amp; Nhà cung cấp, đồng bộ thời gian thực sang các máy khác!</span>
+                </div>
+              )}
+
+              {/* Hướng dẫn sử dụng */}
+              <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-3 text-xs text-blue-900 flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <span className="font-bold">Quản trị bảng định lượng BOM:</span> Bạn có thể chọn tên nguyên liệu chuẩn hóa từ menu dropdown (Đường kính, Dầu ăn, Nước mắm, Muối I-ốt...) hoặc tự gõ tên mới; chọn/sửa trực tiếp tên Nhà cung cấp (NCC) hoặc Cơ sở sản xuất. Mọi thay đổi sau khi lưu sẽ đồng bộ thời gian thực sang các máy khác trên toàn hệ thống.
+                </div>
+              </div>
+
+              {/* Bảng Danh Sách Nguyên Liệu BOM */}
+              <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-2xs">
                 <table className="w-full text-xs text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
-                      <th className="p-2.5 border-r border-slate-200">STT</th>
-                      <th className="p-2.5 border-r border-slate-200">Tên nguyên liệu</th>
-                      <th className="p-2.5 border-r border-slate-200 text-center">Loại</th>
-                      <th className="p-2.5 border-r border-slate-200 text-right">Định lượng thô/suất</th>
-                      <th className="p-2.5 border-r border-slate-200 text-right">Tinh sạch/suất</th>
-                      <th className="p-2.5 border-r border-slate-200 text-right">Hao hụt (%)</th>
-                      <th className="p-2.5 border-r border-slate-200 text-right">Calo (Kcal)</th>
-                      <th className="p-2.5">Nhà cung cấp / Cơ sở sản xuất</th>
+                      <th className="p-2.5 border-r border-slate-200 text-center w-10">STT</th>
+                      <th className="p-2.5 border-r border-slate-200 min-w-[200px]">Tên nguyên liệu (Dropdown / Tự nhập)</th>
+                      <th className="p-2.5 border-r border-slate-200 text-center w-28">Loại NL</th>
+                      <th className="p-2.5 border-r border-slate-200 text-right w-24">ĐL thô (g)</th>
+                      <th className="p-2.5 border-r border-slate-200 text-right w-24">Tinh sạch (g)</th>
+                      <th className="p-2.5 border-r border-slate-200 text-right w-20">Hao hụt (%)</th>
+                      <th className="p-2.5 border-r border-slate-200 text-right w-20">Calo (Kcal)</th>
+                      <th className="p-2.5 border-r border-slate-200 min-w-[220px]">Nhà cung cấp / Cơ sở sản xuất</th>
+                      <th className="p-2.5 text-center w-12">Xóa</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {resolveDishIngredients(selectedDishForBOM).map((ing, idx) => (
-                      <tr key={idx} className="hover:bg-blue-50/40">
-                        <td className="p-2.5 text-center border-r border-slate-200 font-mono text-slate-500">
+                    {editableBOM.map((ing, idx) => (
+                      <tr key={idx} className="hover:bg-blue-50/30">
+                        {/* STT */}
+                        <td className="p-2.5 text-center border-r border-slate-200 font-mono text-slate-500 font-bold">
                           {idx + 1}
                         </td>
-                        <td className="p-2.5 font-bold text-slate-900 border-r border-slate-200">
-                          {ing.name}
+
+                        {/* Tên nguyên liệu */}
+                        <td className="p-2 border-r border-slate-200">
+                          <div className="space-y-1">
+                            <select
+                              value={STANDARD_CLEAN_INGREDIENTS.includes(ing.name) ? ing.name : '__custom__'}
+                              onChange={(e) => {
+                                if (e.target.value !== '__custom__') {
+                                  handleUpdateBOMRow(idx, { name: e.target.value });
+                                }
+                              }}
+                              className="w-full text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-lg px-2 py-1 focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="" disabled>-- Chọn nguyên liệu chuẩn --</option>
+                              {STANDARD_CLEAN_INGREDIENTS.map((item) => (
+                                <option key={item} value={item}>
+                                  {item}
+                                </option>
+                              ))}
+                              <option value="__custom__">-- Tự nhập tên khác --</option>
+                            </select>
+                            <input
+                              type="text"
+                              value={ing.name || ''}
+                              onChange={(e) => handleUpdateBOMRow(idx, { name: e.target.value })}
+                              placeholder="Nhập tên nguyên liệu..."
+                              className="w-full text-xs font-semibold text-slate-900 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:bg-white focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
                         </td>
-                        <td className="p-2.5 text-center border-r border-slate-200">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                              ing.type === 'tuoi_song'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
+
+                        {/* Loại NL */}
+                        <td className="p-2 border-r border-slate-200 text-center">
+                          <select
+                            value={ing.type || 'tuoi_song'}
+                            onChange={(e) => handleUpdateBOMRow(idx, { type: e.target.value })}
+                            className="text-xs font-semibold rounded-lg border border-slate-300 px-2 py-1 bg-white text-slate-800"
                           >
-                            {ing.type === 'tuoi_song' ? 'Tươi sống' : 'Đồ khô / Gia vị'}
-                          </span>
+                            <option value="tuoi_song">Tươi sống</option>
+                            <option value="kho">Đồ khô / Gia vị</option>
+                          </select>
                         </td>
-                        <td className="p-2.5 text-right font-mono font-bold text-blue-900 border-r border-slate-200">
-                          {ing.rawPerPortionGrams}g
+
+                        {/* ĐL thô (g) */}
+                        <td className="p-2 border-r border-slate-200 text-right">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={ing.rawPerPortionGrams ?? 0}
+                            onChange={(e) => handleUpdateBOMRow(idx, { rawPerPortionGrams: Number(e.target.value) })}
+                            className="w-20 text-right font-mono font-bold text-blue-900 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 focus:bg-white"
+                          />
                         </td>
-                        <td className="p-2.5 text-right font-mono text-slate-700 border-r border-slate-200">
-                          {ing.cleanPerPortionGrams}g
+
+                        {/* Tinh sạch (g) */}
+                        <td className="p-2 border-r border-slate-200 text-right">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={ing.cleanPerPortionGrams ?? 0}
+                            onChange={(e) => handleUpdateBOMRow(idx, { cleanPerPortionGrams: Number(e.target.value) })}
+                            className="w-20 text-right font-mono text-slate-700 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 focus:bg-white"
+                          />
                         </td>
-                        <td className="p-2.5 text-right font-mono text-rose-700 border-r border-slate-200">
-                          {ing.wasteRate ? `${ing.wasteRate}%` : '0%'}
+
+                        {/* Hao hụt (%) */}
+                        <td className="p-2 border-r border-slate-200 text-right">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={ing.wasteRate ?? 0}
+                            onChange={(e) => handleUpdateBOMRow(idx, { wasteRate: Number(e.target.value) })}
+                            className="w-16 text-right font-mono text-rose-700 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 focus:bg-white"
+                          />
                         </td>
-                        <td className="p-2.5 text-right font-mono text-amber-800 font-bold border-r border-slate-200">
-                          {ing.calories}
+
+                        {/* Calo */}
+                        <td className="p-2 border-r border-slate-200 text-right">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={ing.calories ?? 0}
+                            onChange={(e) => handleUpdateBOMRow(idx, { calories: Number(e.target.value) })}
+                            className="w-16 text-right font-mono font-bold text-amber-800 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 focus:bg-white"
+                          />
                         </td>
-                        <td className="p-2.5 text-slate-700">
-                          <div className="font-semibold text-slate-900">{ing.supplierName || ing.producerName || 'Cơ sở chuẩn hóa'}</div>
-                          <div className="text-[10px] text-slate-500">{ing.supplierAddress || ing.producerAddress}</div>
+
+                        {/* Nhà cung cấp / Cơ sở sản xuất */}
+                        <td className="p-2 border-r border-slate-200">
+                          <div className="space-y-1">
+                            <select
+                              value={supplierOptions.includes(ing.supplierName || '') ? ing.supplierName : '__custom__'}
+                              onChange={(e) => {
+                                if (e.target.value !== '__custom__') {
+                                  handleUpdateBOMRow(idx, { supplierName: e.target.value, producerName: e.target.value });
+                                }
+                              }}
+                              className="w-full text-[11px] font-semibold text-slate-800 bg-white border border-slate-300 rounded-lg px-2 py-1"
+                            >
+                              <option value="" disabled>-- Chọn NCC / Cơ sở --</option>
+                              {supplierOptions.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                              <option value="__custom__">-- Tự nhập NCC / Cơ sở khác --</option>
+                            </select>
+                            <input
+                              type="text"
+                              value={ing.supplierName || ing.producerName || ''}
+                              onChange={(e) => handleUpdateBOMRow(idx, { supplierName: e.target.value, producerName: e.target.value })}
+                              placeholder="Nhập tên NCC hoặc Cơ sở sản xuất..."
+                              className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:bg-white focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                        </td>
+
+                        {/* Xóa dòng */}
+                        <td className="p-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveBOMRow(idx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
+                            title="Xóa nguyên liệu này khỏi BOM"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+
+              {/* Nút thêm dòng nguyên liệu & Khôi phục */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleAddBOMRow}
+                  className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Plus className="w-4 h-4 text-blue-700" />
+                  <span>+ Thêm nguyên liệu vào BOM</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResetBOMToDefault}
+                  className="px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl text-xs font-medium flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Khôi phục nguyên liệu ban đầu của món này"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Nạp lại BOM chuẩn ban đầu</span>
+                </button>
+              </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSelectedDishForBOM(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold cursor-pointer"
-              >
-                Đóng bảng định lượng
-              </button>
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+              <span className="text-xs text-slate-500">
+                Lưu ý: Thay đổi sẽ áp dụng cho toàn bộ hồ sơ kiểm thực 3 bước và báo cáo dinh dưỡng liên quan.
+              </span>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDishForBOM(null)}
+                  className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveBOM}
+                  disabled={bomSaving}
+                  className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer transition-all disabled:opacity-50"
+                >
+                  {bomSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Đang lưu &amp; đồng bộ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Lưu &amp; Đồng bộ BOM món ăn</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -927,12 +1446,13 @@ export default function MenuManagement({
                     }
                     className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300"
                   >
-                    <option value="Món mặn chính">Món mặn chính</option>
-                    <option value="Món canh">Món canh</option>
-                    <option value="Bữa sáng & Bữa xế">Bữa sáng & Bữa xế</option>
-                    <option value="Đồ uống & Nước ép">Đồ uống & Nước ép</option>
-                    <option value="Tráng miệng">Tráng miệng</option>
-                    <option value="Món ăn kèm & Cơm">Món ăn kèm & Cơm</option>
+                    <option value="Bữa sáng">1. Bữa Sáng (Ăn sáng)</option>
+                    <option value="Món mặn chính">2. Bữa Trưa - Món mặn chính</option>
+                    <option value="Món canh">2. Bữa Trưa - Món canh</option>
+                    <option value="Bữa xế (phụ)">3. Bữa Xế (phụ) (Ăn nhẹ chiều)</option>
+                    <option value="Đồ uống & Nước ép">Đồ uống &amp; Sữa hạt</option>
+                    <option value="Tráng miệng">Tráng miệng &amp; Hoa quả</option>
+                    <option value="Món ăn kèm & Cơm">Món ăn kèm &amp; Cơm</option>
                   </select>
                 </div>
 

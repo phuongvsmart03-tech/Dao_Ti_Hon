@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   ModuleId,
   SchoolInfo,
@@ -26,9 +26,12 @@ import {
   saveSchoolInfo,
   getDefaultSettings,
   saveDefaultSettings,
+  AppDefaultSettings,
   moduleStorage,
   backupRestore,
   exportToCsv,
+  recordDeletedId,
+  getDeletedIds,
 } from '@/lib/storage';
 
 import {
@@ -215,8 +218,9 @@ export default function MainPage() {
   }, []);
 
   // Xóa toàn bộ dữ liệu mẫu để người dùng bắt đầu tự nhập dữ liệu thực tế
-  const handleConfirmClearAllData = useCallback(() => {
+  const handleConfirmClearAllData = useCallback(async () => {
     backupRestore.clearAllData();
+    clearDeletedIds();
     if (typeof window !== 'undefined') {
       localStorage.removeItem('lightning_custom_dishes');
       localStorage.removeItem('lightning_custom_counts');
@@ -234,8 +238,30 @@ export default function MainPage() {
     setLessonsData([]);
     setSalariesData([]);
     setTransactionsData([]);
+    setLightningState({ customDishes: {}, customCounts: {} });
+
+    // Gọi trực tiếp API Server /api/turso để xóa sạch toàn bộ Master Database (cả SQLite local lẫn Turso Cloud)
+    try {
+      await fetch('/api/turso', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset_all_data' }),
+      });
+    } catch (e) {
+      console.error('Lỗi khi gửi lệnh reset toàn bộ dữ liệu lên máy chủ:', e);
+    }
+
+    // Đánh dấu xóa qua BroadcastChannel để các tab khác cũng xóa sạch ngay tức thì
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const bc = new BroadcastChannel('mamnon_sync_channel');
+        bc.postMessage({ type: 'ALL_DATA_CLEARED' });
+        bc.close();
+      } catch {}
+    }
+
     setIsClearAllDataModalOpen(false);
-    showToast('Đã xóa sạch toàn bộ data mẫu. Hệ thống sẵn sàng để bạn tự nhập dữ liệu thực tế!', 'success');
+    showToast('Đã xóa sạch toàn bộ data mẫu trên cả thiết bị và máy chủ! Hệ thống sẵn sàng để bạn tự nhập dữ liệu thực tế.', 'success');
   }, [showToast]);
 
   // Quick Save & Sync to Turso Cloud handler with guaranteed local storage
@@ -427,8 +453,21 @@ export default function MainPage() {
     }).catch((e) => console.error('Lỗi khi đồng bộ lên máy chủ:', e));
   }, []);
 
-  // Xóa nguyên tử bản ghi trực tiếp trên Server Database để không bị hồi sinh lại
+  // Xóa nguyên tử bản ghi trực tiếp trên Server Database và ghi nhận Tombstone vĩnh viễn
   const deleteRecordFromServer = useCallback((targetModule: string, id: string) => {
+    // 1. Ghi nhận ID vào bộ nhớ Tombstone của máy này
+    recordDeletedId(id);
+
+    // 2. Bắn tín hiệu qua BroadcastChannel cho các tab / cửa sổ khác trên máy cập nhật ngay tức thì
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const bc = new BroadcastChannel('mamnon_sync_channel');
+        bc.postMessage({ type: 'RECORD_DELETED', targetModule, id });
+        bc.close();
+      } catch {}
+    }
+
+    // 3. Gửi lệnh xóa lên server database và lưu vào danh sách deleted_records
     fetch('/api/turso', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -440,8 +479,26 @@ export default function MainPage() {
   const loadMasterData = useCallback(async () => {
     try {
       fetchCloudDishLibrary().catch(() => {});
-      const res = await fetch('/api/turso');
-      const data = await res.json();
+      const res = await fetch('/api/turso').catch(() => null);
+      if (!res || !res.ok) {
+        isInitialLoadCompletedRef.current = true;
+        setIsInitialLoadCompleted(true);
+        return;
+      }
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        isInitialLoadCompletedRef.current = true;
+        setIsInitialLoadCompleted(true);
+        return;
+      }
+      const data = await res.json().catch(() => null);
+      if (!data) {
+        isInitialLoadCompletedRef.current = true;
+        setIsInitialLoadCompleted(true);
+        return;
+      }
+      const deletedIds = getDeletedIds();
+
       if (data.connected) {
         setIsTursoConnected(true);
 
@@ -467,60 +524,71 @@ export default function MainPage() {
           localStorage.setItem('audit_logs_v1', JSON.stringify(data.auditLogs));
         }
         if (Array.isArray(data.step1)) {
-          setStep1Data(data.step1);
-          moduleStorage.saveStep1(data.step1);
+          const clean = data.step1.filter((r: any) => !deletedIds.has(r.id));
+          setStep1Data(clean);
+          moduleStorage.saveStep1(clean);
         }
         if (Array.isArray(data.step2)) {
-          setStep2Data(data.step2);
-          moduleStorage.saveStep2(data.step2);
+          const clean = data.step2.filter((r: any) => !deletedIds.has(r.id));
+          setStep2Data(clean);
+          moduleStorage.saveStep2(clean);
         }
         if (Array.isArray(data.step3)) {
-          setStep3Data(data.step3);
-          moduleStorage.saveStep3(data.step3);
+          const clean = data.step3.filter((r: any) => !deletedIds.has(r.id));
+          setStep3Data(clean);
+          moduleStorage.saveStep3(clean);
         }
         if (Array.isArray(data.menuItems)) {
-          setMenuData(data.menuItems);
-          moduleStorage.saveMenu(data.menuItems);
+          const clean = data.menuItems.filter((r: any) => !deletedIds.has(r.id));
+          setMenuData(clean);
+          moduleStorage.saveMenu(clean);
         }
         if (Array.isArray(data.sampleDisposals)) {
-          setSamplesData(data.sampleDisposals);
-          moduleStorage.saveSamples(data.sampleDisposals);
+          const clean = data.sampleDisposals.filter((r: any) => !deletedIds.has(r.id));
+          setSamplesData(clean);
+          moduleStorage.saveSamples(clean);
         }
         if (Array.isArray(data.students)) {
-          setStudentsData(data.students);
-          moduleStorage.saveStudents(data.students);
+          const clean = data.students.filter((r: any) => !deletedIds.has(r.id));
+          setStudentsData(clean);
+          moduleStorage.saveStudents(clean);
         }
         if (Array.isArray(data.healthRecords)) {
-          setHealthData(data.healthRecords);
-          moduleStorage.saveHealth(data.healthRecords);
+          const clean = data.healthRecords.filter((r: any) => !deletedIds.has(r.id));
+          setHealthData(clean);
+          moduleStorage.saveHealth(clean);
         }
         if (Array.isArray(data.staffMembers)) {
-          setStaffData(data.staffMembers);
-          moduleStorage.saveStaff(data.staffMembers);
+          const clean = data.staffMembers.filter((r: any) => !deletedIds.has(r.id));
+          setStaffData(clean);
+          moduleStorage.saveStaff(clean);
         }
         if (Array.isArray(data.lessonPlans)) {
-          setLessonsData(data.lessonPlans);
-          moduleStorage.saveLessons(data.lessonPlans);
+          const clean = data.lessonPlans.filter((r: any) => !deletedIds.has(r.id));
+          setLessonsData(clean);
+          moduleStorage.saveLessons(clean);
         }
         if (Array.isArray(data.teacherSalaries)) {
-          setSalariesData(data.teacherSalaries);
-          moduleStorage.saveSalaries(data.teacherSalaries);
+          const clean = data.teacherSalaries.filter((r: any) => !deletedIds.has(r.id));
+          setSalariesData(clean);
+          moduleStorage.saveSalaries(clean);
         }
         if (Array.isArray(data.financeTransactions)) {
-          setTransactionsData(data.financeTransactions);
-          moduleStorage.saveTransactions(data.financeTransactions);
+          const clean = data.financeTransactions.filter((r: any) => !deletedIds.has(r.id));
+          setTransactionsData(clean);
+          moduleStorage.saveTransactions(clean);
         }
       }
       isInitialLoadCompletedRef.current = true;
       setIsInitialLoadCompleted(true);
-    } catch (err) {
-      console.error('Lỗi khi tải dữ liệu từ máy chủ:', err);
+    } catch {
+      // Offline fallback: Sử dụng dữ liệu cục bộ an toàn
       isInitialLoadCompletedRef.current = true;
       setIsInitialLoadCompleted(true);
     }
   }, []);
 
-  // Tự động tải từ Master Database khi mở máy và polling định kỳ để đồng bộ xuyên suốt các thiết bị
+  // Tự động tải từ Master Database khi mở máy và polling định kỳ 15s để đồng bộ xuyên suốt các thiết bị
   useEffect(() => {
     let isMounted = true;
 
@@ -532,8 +600,39 @@ export default function MainPage() {
 
     runSync();
 
-    const interval = setInterval(runSync, 7000);
+    const interval = setInterval(runSync, 15000);
     window.addEventListener('focus', runSync);
+
+    // Kênh đồng bộ BroadcastChannel tức thời giữa các tab / trình duyệt
+    let syncChannel: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        syncChannel = new BroadcastChannel('mamnon_sync_channel');
+        syncChannel.onmessage = (event) => {
+          if (event.data?.type === 'ALL_DATA_CLEARED') {
+            backupRestore.clearAllData();
+            clearDeletedIds();
+            setStep1Data([]);
+            setStep2Data([]);
+            setStep3Data([]);
+            setMenuData([]);
+            setSamplesData([]);
+            setStudentsData([]);
+            setHealthData([]);
+            setStaffData([]);
+            setLessonsData([]);
+            setSalariesData([]);
+            setTransactionsData([]);
+            setLightningState({ customDishes: {}, customCounts: {} });
+            return;
+          }
+          if (event.data?.type === 'RECORD_DELETED' && event.data.id) {
+            recordDeletedId(event.data.id);
+          }
+          runSync();
+        };
+      } catch {}
+    }
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key && (e.key.startsWith('preschool_') || e.key.startsWith('lightning_'))) {
@@ -547,6 +646,7 @@ export default function MainPage() {
       clearInterval(interval);
       window.removeEventListener('focus', runSync);
       window.removeEventListener('storage', handleStorageChange);
+      syncChannel?.close();
     };
   }, [loadMasterData]);
 
@@ -600,8 +700,20 @@ export default function MainPage() {
   };
 
   const handlePullFromCloud = async () => {
-    const res = await fetch('/api/turso');
-    const result = await res.json();
+    const res = await fetch('/api/turso').catch(() => null);
+    if (!res || !res.ok) {
+      await fetchCloudDishLibrary();
+      throw new Error('Chưa thể kết nối tới cơ sở dữ liệu máy chủ, đã tải dữ liệu từ bộ nhớ máy.');
+    }
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      await fetchCloudDishLibrary();
+      throw new Error('Phản hồi từ máy chủ không đúng định dạng JSON.');
+    }
+    const result = await res.json().catch(() => null);
+    if (!result) {
+      throw new Error('Không thể đọc dữ liệu phản hồi từ máy chủ.');
+    }
     if (!result.connected && !result.data && !result.step1) {
       // Try pulling dishes from central server fallback
       await fetchCloudDishLibrary();
@@ -609,6 +721,8 @@ export default function MainPage() {
     }
 
     const data = result.data || result;
+    const deletedIds = getDeletedIds();
+
     if (data.schoolInfo) {
       setSchoolInfo(data.schoolInfo);
       saveSchoolInfo(data.schoolInfo);
@@ -626,56 +740,67 @@ export default function MainPage() {
         localStorage.setItem('lightning_custom_counts', JSON.stringify(data.lightningState.customCounts));
       }
     }
-    if (data.step1 && data.step1.length > 0) {
-      setStep1Data(data.step1);
-      moduleStorage.saveStep1(data.step1);
+    if (Array.isArray(data.step1)) {
+      const clean = data.step1.filter((r: any) => !deletedIds.has(r.id));
+      setStep1Data(clean);
+      moduleStorage.saveStep1(clean);
     }
-    if (data.step2 && data.step2.length > 0) {
-      setStep2Data(data.step2);
-      moduleStorage.saveStep2(data.step2);
+    if (Array.isArray(data.step2)) {
+      const clean = data.step2.filter((r: any) => !deletedIds.has(r.id));
+      setStep2Data(clean);
+      moduleStorage.saveStep2(clean);
     }
-    if (data.step3 && data.step3.length > 0) {
-      setStep3Data(data.step3);
-      moduleStorage.saveStep3(data.step3);
+    if (Array.isArray(data.step3)) {
+      const clean = data.step3.filter((r: any) => !deletedIds.has(r.id));
+      setStep3Data(clean);
+      moduleStorage.saveStep3(clean);
     }
     const menuList = data.menuItems || data.menu;
-    if (menuList && menuList.length > 0) {
-      setMenuData(menuList);
-      moduleStorage.saveMenu(menuList);
+    if (Array.isArray(menuList)) {
+      const clean = menuList.filter((r: any) => !deletedIds.has(r.id));
+      setMenuData(clean);
+      moduleStorage.saveMenu(clean);
     }
     const sampleList = data.sampleDisposals || data.samples;
-    if (sampleList && sampleList.length > 0) {
-      setSamplesData(sampleList);
-      moduleStorage.saveSamples(sampleList);
+    if (Array.isArray(sampleList)) {
+      const clean = sampleList.filter((r: any) => !deletedIds.has(r.id));
+      setSamplesData(clean);
+      moduleStorage.saveSamples(clean);
     }
-    if (data.students && data.students.length > 0) {
-      setStudentsData(data.students);
-      moduleStorage.saveStudents(data.students);
+    if (Array.isArray(data.students)) {
+      const clean = data.students.filter((r: any) => !deletedIds.has(r.id));
+      setStudentsData(clean);
+      moduleStorage.saveStudents(clean);
     }
     const healthList = data.healthRecords || data.health;
-    if (healthList && healthList.length > 0) {
-      setHealthData(healthList);
-      moduleStorage.saveHealth(healthList);
+    if (Array.isArray(healthList)) {
+      const clean = healthList.filter((r: any) => !deletedIds.has(r.id));
+      setHealthData(clean);
+      moduleStorage.saveHealth(clean);
     }
     const staffList = data.staffMembers || data.staff;
-    if (staffList && staffList.length > 0) {
-      setStaffData(staffList);
-      moduleStorage.saveStaff(staffList);
+    if (Array.isArray(staffList)) {
+      const clean = staffList.filter((r: any) => !deletedIds.has(r.id));
+      setStaffData(clean);
+      moduleStorage.saveStaff(clean);
     }
     const lessonList = data.lessonPlans || data.lessons;
-    if (lessonList && lessonList.length > 0) {
-      setLessonsData(lessonList);
-      moduleStorage.saveLessons(lessonList);
+    if (Array.isArray(lessonList)) {
+      const clean = lessonList.filter((r: any) => !deletedIds.has(r.id));
+      setLessonsData(clean);
+      moduleStorage.saveLessons(clean);
     }
     const salaryList = data.teacherSalaries || data.salaries;
-    if (salaryList && salaryList.length > 0) {
-      setSalariesData(salaryList);
-      moduleStorage.saveSalaries(salaryList);
+    if (Array.isArray(salaryList)) {
+      const clean = salaryList.filter((r: any) => !deletedIds.has(r.id));
+      setSalariesData(clean);
+      moduleStorage.saveSalaries(clean);
     }
     const transactionList = data.financeTransactions || data.transactions;
-    if (transactionList && transactionList.length > 0) {
-      setTransactionsData(transactionList);
-      moduleStorage.saveTransactions(transactionList);
+    if (Array.isArray(transactionList)) {
+      const clean = transactionList.filter((r: any) => !deletedIds.has(r.id));
+      setTransactionsData(clean);
+      moduleStorage.saveTransactions(clean);
     }
 
     // Pull and update dish library
@@ -711,6 +836,7 @@ export default function MainPage() {
   // Handler to reset/clear all module records
   const handleResetAllData = async () => {
     moduleStorage.clearAllData();
+    clearDeletedIds();
     setStep1Data([]);
     setStep2Data([]);
     setStep3Data([]);
@@ -722,13 +848,16 @@ export default function MainPage() {
     setLessonsData([]);
     setSalariesData([]);
     setTransactionsData([]);
+    setLightningState({ customDishes: {}, customCounts: {} });
 
-    if (isTursoConnected) {
+    try {
       await fetch('/api/turso', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reset_all_data' }),
       });
+    } catch (e) {
+      console.error('Lỗi khi reset toàn bộ dữ liệu máy chủ:', e);
     }
   };
 
@@ -997,7 +1126,7 @@ export default function MainPage() {
     deleteRecordFromServer('samples', id);
   };
 
-  // CRUD Handlers for Students
+  // CRUD Handlers for Students (Đồng bộ hai chiều với Hồ sơ sức khỏe)
   const handleSaveStudents = (record: StudentRecord) => {
     const exists = studentsData.some((r) => r.id === record.id);
     const updated = exists
@@ -1006,13 +1135,101 @@ export default function MainPage() {
     setStudentsData(updated);
     moduleStorage.saveStudents(updated);
     syncModuleToServer('students', updated);
+
+    // Đồng bộ tức thì sang Hồ sơ sức khỏe:
+    // 1. Nếu học sinh chưa có hồ sơ sức khỏe -> Tự động khởi tạo hồ sơ ban đầu chuẩn hóa
+    // 2. Nếu đã có -> Tự động cập nhật họ tên và lớp học của bé để dữ liệu luôn khớp 100%
+    setHealthData((prevHealth) => {
+      let updatedHealth = [...prevHealth];
+      const hasHealthRecord = updatedHealth.some(
+        (h) =>
+          h.studentId === record.id ||
+          h.studentName.trim().toLowerCase() === record.fullName.trim().toLowerCase()
+      );
+
+      if (!hasHealthRecord) {
+        let h = 100;
+        let w = 15.5;
+        if (record.className.includes('Nhà Trẻ')) {
+          h = 86.5;
+          w = 12.2;
+        } else if (record.className.includes('Mầm')) {
+          h = 96.0;
+          w = 14.2;
+        } else if (record.className.includes('Chồi')) {
+          h = 103.5;
+          w = 16.5;
+        } else if (record.className.includes('Lá')) {
+          h = 111.0;
+          w = 19.0;
+        }
+
+        const newHealthRec: HealthRecord = {
+          id: `hr-${record.id}`,
+          studentId: record.id,
+          studentName: record.fullName,
+          className: record.className,
+          checkDate: new Date().toISOString().split('T')[0],
+          heightCm: h,
+          weightKg: w,
+          nutritionStatus: 'Bình thường (Kênh A)',
+          vaccinationStatus: 'Đầy đủ theo độ tuổi',
+          generalHealth: 'Tốt',
+          doctorOrExaminer: 'Cán bộ Y tế học đường',
+          notes: record.allergiesOrDiet ? `Lưu ý ăn uống: ${record.allergiesOrDiet}` : 'Đồng bộ từ hồ sơ lớp học',
+        };
+        updatedHealth = [newHealthRec, ...updatedHealth];
+      } else {
+        updatedHealth = updatedHealth.map((h) => {
+          if (
+            h.studentId === record.id ||
+            h.studentName.trim().toLowerCase() === record.fullName.trim().toLowerCase()
+          ) {
+            return {
+              ...h,
+              studentName: record.fullName,
+              className: record.className,
+            };
+          }
+          return h;
+        });
+      }
+
+      moduleStorage.saveHealth(updatedHealth);
+      syncModuleToServer('health', updatedHealth);
+      return updatedHealth;
+    });
   };
 
   const handleDeleteStudents = (id: string) => {
+    const studentToDelete = studentsData.find((s) => s.id === id);
     const updated = studentsData.filter((r) => r.id !== id);
     setStudentsData(updated);
     moduleStorage.saveStudents(updated);
+    recordDeletedId(id);
     deleteRecordFromServer('students', id);
+
+    // Dọn dẹp đồng bộ hồ sơ sức khỏe của học sinh bị xóa
+    if (studentToDelete) {
+      setHealthData((prevHealth) => {
+        const remainingHealth = prevHealth.filter(
+          (h) =>
+            h.studentId !== id &&
+            h.studentName.trim().toLowerCase() !== studentToDelete.fullName.trim().toLowerCase()
+        );
+        const removedRecords = prevHealth.filter(
+          (h) =>
+            h.studentId === id ||
+            h.studentName.trim().toLowerCase() === studentToDelete.fullName.trim().toLowerCase()
+        );
+        removedRecords.forEach((rh) => {
+          recordDeletedId(rh.id);
+          deleteRecordFromServer('health', rh.id);
+        });
+        moduleStorage.saveHealth(remainingHealth);
+        return remainingHealth;
+      });
+    }
   };
 
   // CRUD Handlers for Health
@@ -1645,18 +1862,10 @@ export default function MainPage() {
             />
           )}
 
-          {activeModuleId === 'samples' && (
-            <SampleDisposal
-              records={samplesData}
-              onSaveRecord={handleSaveSamples}
-              onDeleteRecord={handleDeleteSamples}
-              onPrintPreview={() => setIsReportModalOpen(true)}
-            />
-          )}
-
           {activeModuleId === 'students' && (
             <StudentManagement
               records={studentsData}
+              healthRecords={healthData}
               onSaveRecord={handleSaveStudents}
               onDeleteRecord={handleDeleteStudents}
               onPrintPreview={() => setIsReportModalOpen(true)}
@@ -1667,6 +1876,7 @@ export default function MainPage() {
           {activeModuleId === 'health' && (
             <HealthRecords
               records={healthData}
+              students={studentsData}
               onSaveRecord={handleSaveHealth}
               onDeleteRecord={handleDeleteHealth}
               onPrintPreview={() => setIsReportModalOpen(true)}

@@ -93,6 +93,11 @@ export interface SchoolInfo {
   sampleDisposerSignature?: string; // Chữ ký số Người hủy mẫu
   principalSignature?: string; // Chữ ký số Hiệu trưởng / BGH
 
+  // Cấu hình lưu mẫu & ngày học
+  sampleStorageTemp?: string; // Mặc định 5°C theo yêu cầu khách hàng
+  learnSaturday?: boolean; // Học Thứ 7
+  learnSunday?: boolean; // Học Chủ Nhật
+
   // Cấu hình Nhà cung cấp thực phẩm địa phương (cho in ấn & thanh tra)
   // I. Tươi sống: Thịt, cá, gia cầm
   meatSupplierName?: string;
@@ -168,6 +173,8 @@ export interface Step3Record {
 export type DishCategory =
   | 'Món mặn chính'
   | 'Món canh'
+  | 'Bữa sáng'
+  | 'Bữa xế (phụ)'
   | 'Bữa sáng & Bữa xế'
   | 'Tráng miệng'
   | 'Đồ uống & Nước ép'
@@ -200,6 +207,9 @@ export interface FoodIngredient {
   calciumMg?: number; // Canxi (mg) / 100g
   ironMg?: number; // Sắt (mg) / 100g
   supplierName?: string; // Nhà cung cấp
+  supplierAddress?: string; // Địa chỉ nhà cung cấp
+  producerName?: string; // Cơ sở sản xuất / chế biến
+  producerAddress?: string; // Địa chỉ cơ sở sản xuất
   delivererName?: string; // Người giao hàng
   notes?: string; // Ghi chú đặc thù
 }

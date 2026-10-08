@@ -149,11 +149,11 @@ export const MASTER_SEED_BACKUP_DISHES: DishItem[] = [
     description: 'Dưa hồng non giòn ngọt đặc trưng nấu thịt băm, món canh thanh mát giải độc mùa nóng.',
   },
 
-  // --- III. BỮA SÁNG & BỮA XẾ (6 MÓN) ---
+  // --- III. BỮA SÁNG (BỮA SÁNG DINH DƯỠNG) ---
   {
     id: 'dish-15',
     name: 'Súp gà',
-    category: 'Bữa sáng & Bữa xế',
+    category: 'Bữa sáng',
     defaultMealSlot: 'breakfast',
     suitableAge: 'Tất cả lứa tuổi',
     nutritionTags: ['Đạm gia cầm', 'Dễ nuốt', 'Bổ phế'],
@@ -163,7 +163,7 @@ export const MASTER_SEED_BACKUP_DISHES: DishItem[] = [
   {
     id: 'dish-16',
     name: 'Phở bò',
-    category: 'Bữa sáng & Bữa xế',
+    category: 'Bữa sáng',
     defaultMealSlot: 'breakfast',
     suitableAge: 'Tất cả lứa tuổi',
     nutritionTags: ['Năng lượng cao', 'Sắt', 'Món truyền thống'],
@@ -173,7 +173,7 @@ export const MASTER_SEED_BACKUP_DISHES: DishItem[] = [
   {
     id: 'dish-17',
     name: 'Bánh canh chả cá',
-    category: 'Bữa sáng & Bữa xế',
+    category: 'Bữa sáng',
     defaultMealSlot: 'breakfast',
     suitableAge: 'Tất cả lứa tuổi',
     nutritionTags: ['Đạm cá', 'Sợi dai mềm', 'Nước dùng thanh'],
@@ -183,7 +183,7 @@ export const MASTER_SEED_BACKUP_DISHES: DishItem[] = [
   {
     id: 'dish-18',
     name: 'Cháo thịt bằm',
-    category: 'Bữa sáng & Bữa xế',
+    category: 'Bữa sáng',
     defaultMealSlot: 'breakfast',
     suitableAge: 'Nhà trẻ & Mẫu giáo Bé',
     nutritionTags: ['Dễ tiêu hóa', 'Ấm dạ dày', 'Lành tính'],
@@ -193,7 +193,7 @@ export const MASTER_SEED_BACKUP_DISHES: DishItem[] = [
   {
     id: 'dish-19',
     name: 'Soup nui',
-    category: 'Bữa sáng & Bữa xế',
+    category: 'Bữa xế (phụ)',
     defaultMealSlot: 'afternoonSnack',
     suitableAge: 'Tất cả lứa tuổi',
     nutritionTags: ['Carbohydrate tốt', 'Hình thù đẹp mắt', 'Vitamin'],
@@ -203,7 +203,7 @@ export const MASTER_SEED_BACKUP_DISHES: DishItem[] = [
   {
     id: 'dish-20',
     name: 'Bánh hỏi chả lụa',
-    category: 'Bữa sáng & Bữa xế',
+    category: 'Bữa sáng',
     defaultMealSlot: 'breakfast',
     suitableAge: 'Mẫu giáo (3-6 tuổi)',
     nutritionTags: ['Năng lượng sạch', 'Thơm bột gạo', 'Dễ ăn'],
@@ -370,7 +370,7 @@ export function getStoredDishLibrary(): DishItem[] {
               },
               {
                 id: 'ing-lemon-2',
-                name: 'Đường kính trắng Biên Hòa',
+                name: 'Đường kính',
                 category: 'Gia vị & dầu mỡ' as any,
                 type: 'kho' as any,
                 unit: 'kg',
@@ -454,7 +454,9 @@ export function removeDishFromLibrary(dishId: string): DishItem[] {
 export async function fetchCloudDishLibrary(): Promise<DishItem[]> {
   try {
     const res = await fetch('/api/dishes');
-    if (!res.ok) throw new Error('Failed to fetch from server');
+    if (!res.ok) return getStoredDishLibrary();
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) return getStoredDishLibrary();
     const json = await res.json();
     if (json.success && Array.isArray(json.dishes) && json.dishes.length > 0) {
       const local = getStoredDishLibrary();
@@ -470,8 +472,8 @@ export async function fetchCloudDishLibrary(): Promise<DishItem[]> {
       }
       return merged;
     }
-  } catch (e) {
-    console.warn('Cannot fetch dishes from cloud, using local storage:', e);
+  } catch {
+    // Offline or network error - gracefully use local storage
   }
   return getStoredDishLibrary();
 }

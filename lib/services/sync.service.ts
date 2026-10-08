@@ -755,6 +755,8 @@ export class SyncService {
       `DELETE FROM teacher_salaries;`,
       `DELETE FROM finance_transactions;`,
       `DELETE FROM staff;`,
+      `DELETE FROM lightning_state;`,
+      `DELETE FROM deleted_records;`,
     ].map(sql => ({ sql, args: [] }));
 
     await db.batch(clearStatements, 'write');

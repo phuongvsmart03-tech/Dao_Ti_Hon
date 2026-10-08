@@ -11,7 +11,7 @@ import {
   Sparkles,
   Cloud,
   Share2,
-  HelpCircle,
+  CircleHelp,
 } from 'lucide-react';
 import {
   downloadAsWordDoc,
@@ -192,7 +192,7 @@ export default function GoogleDocsSyncModal({
           {/* Hướng dẫn thao tác */}
           <div className="border-t border-slate-100 pt-4">
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
+              <CircleHelp className="w-3.5 h-3.5 text-slate-500" />
               Quy trình 3 bước đưa giáo án vào Google Docs:
             </h4>
             <ol className="text-xs text-slate-600 space-y-1.5 list-decimal list-inside leading-relaxed">

@@ -126,6 +126,16 @@ export async function GET(req: NextRequest) {
         FinanceService.getTransactions(db, { fromDate, toDate, month }),
       ]);
 
+      let deletedSet = new Set<string>();
+      try {
+        const delRes = await db.execute(`SELECT id FROM deleted_records`);
+        deletedSet = new Set(delRes.rows.map((r: any) => String(r.id)));
+      } catch {
+        // ignore
+      }
+
+      const fDel = (arr: any[]) => Array.isArray(arr) ? arr.filter((item) => !item?.id || !deletedSet.has(String(item.id))) : arr;
+
       return NextResponse.json({
         connected: true,
         configured: true,
@@ -133,19 +143,19 @@ export async function GET(req: NextRequest) {
         defaultSettings,
         lightningState,
         auditLogs,
-        step1,
-        step2,
-        step3,
-        sampleDisposals,
-        menuItems,
+        step1: fDel(step1),
+        step2: fDel(step2),
+        step3: fDel(step3),
+        sampleDisposals: fDel(sampleDisposals),
+        menuItems: fDel(menuItems),
         dishBreakdowns,
-        dishLibrary,
-        students,
-        healthRecords,
-        staffMembers,
-        lessonPlans,
-        teacherSalaries,
-        financeTransactions,
+        dishLibrary: fDel(dishLibrary),
+        students: fDel(students),
+        healthRecords: fDel(healthRecords),
+        staffMembers: fDel(staffMembers),
+        lessonPlans: fDel(lessonPlans),
+        teacherSalaries: fDel(teacherSalaries),
+        financeTransactions: fDel(financeTransactions),
         counts: {
           step1: step1.length,
           step2: step2.length,
@@ -263,19 +273,38 @@ export async function POST(req: NextRequest) {
         };
         const tableName = tableMap[targetModule];
         if (tableName) {
-          await db.execute({
-            sql: `DELETE FROM ${tableName} WHERE id = ?`,
-            args: [targetId],
-          });
-          return NextResponse.json({ success: true, message: `Đã xóa bản ghi ${targetId} khỏi bảng ${tableName}` });
+          await db.batch([
+            {
+              sql: `DELETE FROM ${tableName} WHERE id = ?`,
+              args: [targetId],
+            },
+            {
+              sql: `INSERT INTO deleted_records (id, module, deleted_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET deleted_at = excluded.deleted_at`,
+              args: [targetId, targetModule, Date.now()],
+            },
+          ], 'write');
+          return NextResponse.json({ success: true, message: `Đã xóa bản ghi ${targetId} khỏi bảng ${tableName} và lưu vào danh sách xóa vĩnh viễn` });
         }
         return NextResponse.json({ success: false, error: `Không tìm thấy bảng cho module '${targetModule}'` }, { status: 400 });
       }
 
-      // 1. Đồng bộ từng module (Sync Module with Upsert & LWW)
+      // 1. Đồng bộ từng module (Sync Module with Upsert & LWW - Filter out deleted records to prevent resurrection)
       if (action === 'sync_module') {
         const targetModule = moduleName || body.moduleId || body.payload?.moduleId;
-        const targetData = data || payload?.items || payload;
+        const rawTargetData = data || payload?.items || payload;
+
+        // Lấy danh sách ID đã bị xóa để chặn hồi sinh
+        let targetData = rawTargetData;
+        try {
+          const deletedRes = await db.execute(`SELECT id FROM deleted_records`);
+          const deletedSet = new Set(deletedRes.rows.map((r: any) => String(r.id)));
+          if (Array.isArray(rawTargetData)) {
+            targetData = rawTargetData.filter((item: any) => !item?.id || !deletedSet.has(String(item.id)));
+          }
+        } catch {
+          // ignore
+        }
+
         let count = 0;
 
         switch (targetModule) {
