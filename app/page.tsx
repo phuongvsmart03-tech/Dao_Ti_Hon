@@ -32,6 +32,7 @@ import {
   exportToCsv,
   recordDeletedId,
   getDeletedIds,
+  clearDeletedIds,
 } from '@/lib/storage';
 
 import {
