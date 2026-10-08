@@ -1454,8 +1454,21 @@ export default function OfficialPrintView({
                       </tr>
                     </thead>
                     <tbody>
+                      {rec.dishes.breakfast && (
+                        <tr>
+                          <td className="border border-black p-2 text-center font-bold">1</td>
+                          <td className="border border-black p-2">Bữa sáng</td>
+                          <td className="border border-black p-2 font-bold">{rec.dishes.breakfast}</td>
+                          <td className="border border-black p-2 text-center font-semibold">{rec.nurseryCount + rec.kindergartenCount}</td>
+                          <td className="border border-black p-2 text-center">07:15 {dParts.day}/{dParts.month}</td>
+                          <td className="border border-black p-2 text-center">07:30 {dParts.day}/{dParts.month}</td>
+                          <td className="border border-black p-2 text-center font-bold text-emerald-700">✓</td>
+                          <td className="border border-black p-2 text-center"></td>
+                          <td className="border border-black p-2 text-center text-[10px]">Đạt, phục vụ trẻ</td>
+                        </tr>
+                      )}
                       <tr>
-                        <td className="border border-black p-2 text-center font-bold">1</td>
+                        <td className="border border-black p-2 text-center font-bold">{rec.dishes.breakfast ? 2 : 1}</td>
                         <td className="border border-black p-2">Bữa trưa chính</td>
                         <td className="border border-black p-2 font-bold">{rec.dishes.lunchMain}</td>
                         <td className="border border-black p-2 text-center font-semibold">{rec.nurseryCount + rec.kindergartenCount}</td>
@@ -1466,7 +1479,7 @@ export default function OfficialPrintView({
                         <td className="border border-black p-2 text-center text-[10px]">Đạt, phục vụ trẻ</td>
                       </tr>
                       <tr>
-                        <td className="border border-black p-2 text-center font-bold">2</td>
+                        <td className="border border-black p-2 text-center font-bold">{rec.dishes.breakfast ? 3 : 2}</td>
                         <td className="border border-black p-2">Bữa trưa chính</td>
                         <td className="border border-black p-2 font-bold">{rec.dishes.lunchSoup}</td>
                         <td className="border border-black p-2 text-center font-semibold">{rec.nurseryCount + rec.kindergartenCount}</td>
@@ -1477,7 +1490,7 @@ export default function OfficialPrintView({
                         <td className="border border-black p-2 text-center text-[10px]">Đạt, ấm nóng</td>
                       </tr>
                       <tr>
-                        <td className="border border-black p-2 text-center font-bold">3</td>
+                        <td className="border border-black p-2 text-center font-bold">{rec.dishes.breakfast ? 4 : 3}</td>
                         <td className="border border-black p-2">Bữa xế chiều</td>
                         <td className="border border-black p-2 font-bold">{rec.dishes.afternoonSnack}</td>
                         <td className="border border-black p-2 text-center font-semibold">{rec.nurseryCount + rec.kindergartenCount}</td>
@@ -1568,8 +1581,24 @@ export default function OfficialPrintView({
                       </tr>
                     </thead>
                     <tbody>
+                      {rec.dishes.breakfast && (
+                        <tr>
+                          <td className="border border-black p-1.5 text-center font-bold">1</td>
+                          <td className="border border-black p-1.5 font-bold">{rec.dishes.breakfast}</td>
+                          <td className="border border-black p-1.5 text-center">Bữa sáng</td>
+                          <td className="border border-black p-1.5 text-center">{rec.nurseryCount + rec.kindergartenCount}</td>
+                          <td className="border border-black p-1.5 text-center font-semibold">150g (≥100g)</td>
+                          <td className="border border-black p-1.5 text-center text-[9.5px]">Hộp Inox có nắp vô trùng</td>
+                          <td className="border border-black p-1.5 text-center font-semibold">{schoolInfo?.sampleStorageTemp || '5°C'}</td>
+                          <td className="border border-black p-1.5 text-center">07:30 {dParts.day}/{dParts.month}</td>
+                          <td className="border border-black p-1.5 text-center">07:30 {String(Number(dParts.day) + 1).padStart(2, '0')}/{dParts.month}</td>
+                          <td className="border border-black p-1.5 text-center text-[10px]">Niêm phong kín</td>
+                          <td className="border border-black p-1.5 text-center font-medium">{sampleKeeperName}</td>
+                          <td className="border border-black p-1.5 text-center font-medium">{sampleDisposerName}</td>
+                        </tr>
+                      )}
                       <tr>
-                        <td className="border border-black p-1.5 text-center font-bold">1</td>
+                        <td className="border border-black p-1.5 text-center font-bold">{rec.dishes.breakfast ? 2 : 1}</td>
                         <td className="border border-black p-1.5 font-bold">{rec.dishes.lunchMain}</td>
                         <td className="border border-black p-1.5 text-center">Bữa trưa</td>
                         <td className="border border-black p-1.5 text-center">{rec.nurseryCount + rec.kindergartenCount}</td>
@@ -1583,7 +1612,7 @@ export default function OfficialPrintView({
                         <td className="border border-black p-1.5 text-center font-medium">{sampleDisposerName}</td>
                       </tr>
                       <tr>
-                        <td className="border border-black p-1.5 text-center font-bold">2</td>
+                        <td className="border border-black p-1.5 text-center font-bold">{rec.dishes.breakfast ? 3 : 2}</td>
                         <td className="border border-black p-1.5 font-bold">{rec.dishes.lunchSoup}</td>
                         <td className="border border-black p-1.5 text-center">Bữa trưa</td>
                         <td className="border border-black p-1.5 text-center">{rec.nurseryCount + rec.kindergartenCount}</td>
@@ -1597,7 +1626,7 @@ export default function OfficialPrintView({
                         <td className="border border-black p-1.5 text-center font-medium">{sampleDisposerName}</td>
                       </tr>
                       <tr>
-                        <td className="border border-black p-1.5 text-center font-bold">3</td>
+                        <td className="border border-black p-1.5 text-center font-bold">{rec.dishes.breakfast ? 4 : 3}</td>
                         <td className="border border-black p-1.5 font-bold">{rec.dishes.lunchStaple}</td>
                         <td className="border border-black p-1.5 text-center">Bữa trưa</td>
                         <td className="border border-black p-1.5 text-center">{rec.nurseryCount + rec.kindergartenCount}</td>
@@ -1611,7 +1640,7 @@ export default function OfficialPrintView({
                         <td className="border border-black p-1.5 text-center font-medium">{sampleDisposerName}</td>
                       </tr>
                       <tr>
-                        <td className="border border-black p-1.5 text-center font-bold">4</td>
+                        <td className="border border-black p-1.5 text-center font-bold">{rec.dishes.breakfast ? 5 : 4}</td>
                         <td className="border border-black p-1.5 font-bold">{rec.dishes.afternoonSnack}</td>
                         <td className="border border-black p-1.5 text-center">Bữa xế</td>
                         <td className="border border-black p-1.5 text-center">{rec.nurseryCount + rec.kindergartenCount}</td>

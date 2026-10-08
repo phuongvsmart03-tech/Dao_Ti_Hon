@@ -40,6 +40,7 @@ interface HealthRecordsProps {
   onSaveRecord: (record: HealthRecord) => void;
   onDeleteRecord: (id: string) => void;
   onPrintPreview: () => void;
+  onNavigateToStudents?: () => void;
 }
 
 // Hàm tự động tính toán kênh dinh dưỡng theo WHO (BMI & cân nặng / chiều cao)
@@ -71,6 +72,7 @@ export default function HealthRecords({
   onSaveRecord,
   onDeleteRecord,
   onPrintPreview,
+  onNavigateToStudents,
 }: HealthRecordsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
@@ -389,6 +391,17 @@ export default function HealthRecords({
           </div>
 
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {onNavigateToStudents && (
+              <button
+                type="button"
+                onClick={onNavigateToStudents}
+                title="Quay lại danh sách học sinh và điểm danh"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl bg-blue-900/70 hover:bg-blue-800 text-blue-100 border border-blue-400/30 shadow-xs transition-colors cursor-pointer"
+              >
+                <Users className="w-4 h-4 text-blue-300" />
+                <span>Danh Sách Học Sinh ({students?.length || 0})</span>
+              </button>
+            )}
             {students && students.length > 0 && (
               <button
                 type="button"

@@ -35,7 +35,7 @@ const DEFAULT_SAMPLE_FORM: Partial<SampleDisposalRecord> = {
   dishName: '',
   sampleWeight: '150g',
   containerType: 'Hộp Inox có nắp vô trùng',
-  storageTemp: '3.0°C',
+  storageTemp: '5.0°C',
   disposalDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
   disposalTime: '10:30',
   conditionAtDisposal: 'Bình thường, không biến chất',

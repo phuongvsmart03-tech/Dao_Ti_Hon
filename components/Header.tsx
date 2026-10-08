@@ -23,7 +23,10 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { SchoolInfo, ModuleId } from '@/types/preschool';
+import { RealtimeConnectionStatus } from '@/types/realtime';
 import { PRESET_LOGOS } from './LogoSelectModal';
+import RealtimeStatusBadge from './RealtimeStatusBadge';
+import { Radio } from 'lucide-react';
 
 interface HeaderProps {
   schoolInfo: SchoolInfo;
@@ -39,6 +42,9 @@ interface HeaderProps {
   onOpenLogoModal?: () => void;
   onOpenTursoModal?: () => void;
   onOpenAiModal?: () => void;
+  onOpenRealtimeModal?: () => void;
+  realtimeConnectionStatus?: RealtimeConnectionStatus;
+  realtimeActiveCount?: number;
   isTursoConnected?: boolean;
   onSaveCloud?: () => void;
   isSavingCloud?: boolean;
@@ -61,6 +67,9 @@ export default function Header({
   onOpenLogoModal,
   onOpenTursoModal,
   onOpenAiModal,
+  onOpenRealtimeModal,
+  realtimeConnectionStatus = 'connected',
+  realtimeActiveCount = 1,
   isTursoConnected = false,
   onSaveCloud,
   isSavingCloud = false,
@@ -412,6 +421,15 @@ export default function Header({
             );
           })()}
           
+          {/* REALTIME SSE STATUS BADGE (Giai đoạn 3: Real-time Multi-Device Sync) */}
+          {onOpenRealtimeModal && (
+            <RealtimeStatusBadge
+              connectionStatus={realtimeConnectionStatus}
+              activeCount={realtimeActiveCount}
+              onClick={onOpenRealtimeModal}
+            />
+          )}
+
           {/* PRIMARY ACTION: Save & Cloud Status (Xanh dương: đã đồng bộ | Cam: đang lưu | Đỏ: lỗi offline) */}
           {onSaveCloud && (
             <button
@@ -641,6 +659,31 @@ export default function Header({
                         </div>
                         <div className="text-[11px] text-slate-500">
                           Đồng bộ 2 máy, sao lưu JSON &amp; nạp mẫu test
+                        </div>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Item Realtime: SSE Multi-Device Center */}
+                  {onOpenRealtimeModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSystemMenuOpen(false);
+                        onOpenRealtimeModal();
+                      }}
+                      className="w-full text-left p-2.5 rounded-xl hover:bg-sky-50 text-slate-800 transition-colors flex items-center gap-3 cursor-pointer group"
+                    >
+                      <div className="p-2 rounded-lg bg-sky-100 text-sky-800 group-hover:bg-sky-600 group-hover:text-white transition-colors shrink-0">
+                        <Radio className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-slate-900 group-hover:text-sky-950 flex items-center gap-1.5">
+                          <span>Đồng Bộ Thời Gian Thực (SSE)</span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 font-extrabold">Giai đoạn 3</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          Theo dõi thiết bị online, sự kiện &amp; xử lý xung đột
                         </div>
                       </div>
                     </button>

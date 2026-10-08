@@ -28,6 +28,7 @@ interface StudentManagementProps {
   onDeleteRecord: (id: string) => void;
   onPrintPreview: () => void;
   onClearAllSampleData?: () => void;
+  onNavigateToHealth?: (studentId?: string) => void;
 }
 
 export default function StudentManagement({
@@ -37,6 +38,7 @@ export default function StudentManagement({
   onDeleteRecord,
   onPrintPreview,
   onClearAllSampleData,
+  onNavigateToHealth,
 }: StudentManagementProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
@@ -45,6 +47,16 @@ export default function StudentManagement({
   const [heatmapOpen, setHeatmapOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<StudentRecord | null>(null);
   const [deletingStudent, setDeletingStudent] = useState<StudentRecord | null>(null);
+
+  const syncedHealthCount = useMemo(() => {
+    return records.filter((r) =>
+      healthRecords.some(
+        (h) =>
+          h.studentId === r.id ||
+          h.studentName.trim().toLowerCase() === r.fullName.trim().toLowerCase()
+      )
+    ).length;
+  }, [records, healthRecords]);
 
   const [formState, setFormState] = useState<Partial<StudentRecord>>({
     studentCode: `MN-${new Date().getFullYear()}-00${records.length + 1}`,
@@ -141,7 +153,7 @@ export default function StudentManagement({
         <div className="absolute right-0 top-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-xs text-blue-200 font-medium">
+            <div className="flex items-center gap-2 text-xs text-blue-200 font-medium flex-wrap">
               <span className="text-blue-300 font-bold flex items-center gap-1.5 bg-blue-900/60 px-2 py-0.5 rounded-md border border-blue-400/30">
                 <Users className="w-3.5 h-3.5 text-blue-300" />
                 Học Sinh &amp; Điểm Danh
@@ -150,6 +162,11 @@ export default function StudentManagement({
               <span className="text-blue-100">Thông tư 28/2020/TT-BGDĐT</span>
               <span aria-hidden="true" className="text-blue-400">·</span>
               <span className="font-mono text-blue-200 font-semibold">{records.length} học sinh</span>
+              <span aria-hidden="true" className="text-blue-400">·</span>
+              <span className="text-emerald-300 font-bold flex items-center gap-1 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-400/40">
+                <HeartPulse className="w-3 h-3 text-emerald-300" />
+                Đồng bộ {syncedHealthCount}/{records.length} Hồ Sơ Sức Khỏe
+              </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-xs">
               Quản Lý Hồ Sơ Học Sinh &amp; Sổ Điểm Danh Chuyên Cần
@@ -169,6 +186,17 @@ export default function StudentManagement({
               <CalendarDays className="w-4 h-4 text-blue-300" />
               <span>Lịch Điểm Danh (Heatmap)</span>
             </button>
+            {onNavigateToHealth && (
+              <button
+                type="button"
+                onClick={() => onNavigateToHealth()}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl bg-emerald-900/80 hover:bg-emerald-800 text-emerald-100 border border-emerald-400/40 shadow-xs transition-colors cursor-pointer"
+                title="Chuyển sang phân hệ Sức Khỏe & Kênh Dinh Dưỡng"
+              >
+                <HeartPulse className="w-4 h-4 text-emerald-300" />
+                <span>Sổ Sức Khỏe ({healthRecords.length})</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={handleOpenAdd}
@@ -304,17 +332,27 @@ export default function StudentManagement({
                         );
                         if (!hr) {
                           return (
-                            <span className="inline-flex items-center gap-1 text-[10.5px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                              Chờ đo đợt mới
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onNavigateToHealth?.(r.id)}
+                              title="Bấm để đo và tạo hồ sơ sức khỏe cho bé"
+                              className="inline-flex items-center gap-1 text-[10.5px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded border border-blue-200 cursor-pointer transition-colors"
+                            >
+                              <Plus className="w-3 h-3 text-blue-600" />
+                              <span>Đo sức khỏe</span>
+                            </button>
                           );
                         }
                         const isNormal = hr.nutritionStatus.includes('Kênh A') || hr.nutritionStatus.includes('Bình thường');
                         const isUnder = hr.nutritionStatus.includes('nhẹ cân') || hr.nutritionStatus.includes('thấp còi');
                         return (
-                          <div className="space-y-0.5">
+                          <div
+                            onClick={() => onNavigateToHealth?.(r.id)}
+                            title="Bấm để xem chi tiết hồ sơ sức khỏe & biểu đồ tăng trưởng"
+                            className="space-y-0.5 cursor-pointer group"
+                          >
                             <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold border ${
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold border transition-transform group-hover:scale-105 ${
                                 isNormal
                                   ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                                   : isUnder
@@ -325,8 +363,8 @@ export default function StudentManagement({
                               <HeartPulse className="w-3 h-3 shrink-0" />
                               <span>{hr.nutritionStatus}</span>
                             </span>
-                            <div className="text-[10px] text-slate-500 font-mono">
-                              {hr.heightCm}cm • {hr.weightKg}kg
+                            <div className="text-[10px] text-slate-500 font-mono group-hover:text-blue-700">
+                              {hr.heightCm}cm • {hr.weightKg}kg ➔
                             </div>
                           </div>
                         );

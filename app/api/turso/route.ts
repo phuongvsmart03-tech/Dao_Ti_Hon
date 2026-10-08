@@ -9,6 +9,7 @@ import { StaffLessonService } from '@/lib/services/staff-lesson.service';
 import { SystemSettingsService } from '@/lib/services/system-settings.service';
 import { SyncService } from '@/lib/services/sync.service';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
+import { realtimeHub } from '@/lib/realtime-hub';
 
 export const dynamic = 'force-dynamic';
 
@@ -210,6 +211,14 @@ export async function POST(req: NextRequest) {
         const targetData = payload || data || body.schoolInfo;
         if (targetData) {
           await StaffLessonService.upsertSchoolInfo(db, targetData);
+          realtimeHub.broadcastMutation({
+            module: 'school_info',
+            action: 'update',
+            data: targetData,
+            senderId: body.clientId,
+            senderName: body.deviceName,
+            message: 'Đã cập nhật Thông tin Trường học',
+          });
         }
         return NextResponse.json({ success: true, message: 'Đã lưu thông tin trường lên máy chủ thành công' });
       }
@@ -219,6 +228,14 @@ export async function POST(req: NextRequest) {
         const targetSettings = payload || data || body.defaultSettings;
         if (targetSettings) {
           await SystemSettingsService.upsertAppSettings(db, targetSettings);
+          realtimeHub.broadcastMutation({
+            module: 'default_settings',
+            action: 'update',
+            data: targetSettings,
+            senderId: body.clientId,
+            senderName: body.deviceName,
+            message: 'Đã cập nhật Cấu hình Mặc định Hệ thống',
+          });
         }
         return NextResponse.json({ success: true, message: 'Đã lưu cấu hình mặc định lên máy chủ thành công' });
       }
@@ -228,6 +245,14 @@ export async function POST(req: NextRequest) {
         const targetState = payload || data || body.lightningState;
         if (targetState) {
           await SystemSettingsService.upsertLightningState(db, targetState);
+          realtimeHub.broadcastMutation({
+            module: 'lightning_state',
+            action: 'update',
+            data: targetState,
+            senderId: body.clientId,
+            senderName: body.deviceName,
+            message: 'Đã cập nhật Trạng thái Kiểm thực Tia Chớp',
+          });
         }
         return NextResponse.json({ success: true, message: 'Đã lưu trạng thái kiểm thực lên máy chủ thành công' });
       }
@@ -283,6 +308,16 @@ export async function POST(req: NextRequest) {
               args: [targetId, targetModule, Date.now()],
             },
           ], 'write');
+
+          realtimeHub.broadcastMutation({
+            module: targetModule,
+            action: 'delete',
+            recordId: targetId,
+            senderId: body.clientId,
+            senderName: body.deviceName,
+            message: `Đã xóa bản ghi ${targetId} (${targetModule})`,
+          });
+
           return NextResponse.json({ success: true, message: `Đã xóa bản ghi ${targetId} khỏi bảng ${tableName} và lưu vào danh sách xóa vĩnh viễn` });
         }
         return NextResponse.json({ success: false, error: `Không tìm thấy bảng cho module '${targetModule}'` }, { status: 400 });
@@ -443,6 +478,16 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, error: `Module '${targetModule}' không hợp lệ.` }, { status: 400 });
         }
 
+        // Broadcast realtime update to other connected devices
+        realtimeHub.broadcastMutation({
+          module: targetModule,
+          action: 'sync',
+          data: targetData,
+          senderId: body.clientId,
+          senderName: body.deviceName,
+          message: `Đã cập nhật ${count} bản ghi (${targetModule})`,
+        });
+
         return NextResponse.json({
           success: true,
           message: `Đồng bộ thành công ${count} bản ghi của phân hệ '${targetModule}'.`,
@@ -468,6 +513,15 @@ export async function POST(req: NextRequest) {
         }
 
         const result = await SyncService.restoreFullSnapshotAtomic(db, snapshot);
+        realtimeHub.broadcast({
+          id: `restore-${Date.now()}`,
+          type: 'data:sync',
+          timestamp: Date.now(),
+          senderId: body.clientId,
+          senderName: body.deviceName,
+          message: 'Hệ thống vừa khôi phục snapshot cơ sở dữ liệu thành công',
+        });
+
         return NextResponse.json({
           success: true,
           message: `Khôi phục nguyên tử thành công ${result.totalRecords} bản ghi từ bản sao lưu.`,
@@ -478,6 +532,15 @@ export async function POST(req: NextRequest) {
       // 4. Xóa sạch toàn bộ dữ liệu (Reset All Data Atomic)
       if (action === 'reset_all_data') {
         await SyncService.resetAllDataAtomic(db);
+        realtimeHub.broadcast({
+          id: `reset-${Date.now()}`,
+          type: 'data:sync',
+          timestamp: Date.now(),
+          senderId: body.clientId,
+          senderName: body.deviceName,
+          message: 'Hệ thống vừa xóa trắng dữ liệu Master Database',
+        });
+
         return NextResponse.json({
           success: true,
           message: 'Đã xóa trắng toàn bộ dữ liệu trên Master Database.',

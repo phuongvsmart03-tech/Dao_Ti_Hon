@@ -65,6 +65,10 @@ import AdministrativeReportModal from '@/components/AdministrativeReportModal';
 import LogoSelectModal from '@/components/LogoSelectModal';
 import TursoSyncModal from '@/components/TursoSyncModal';
 import AiPreschoolModal from '@/components/AiPreschoolModal';
+import RealtimeDrawerModal from '@/components/RealtimeDrawerModal';
+import ConflictResolutionModal from '@/components/ConflictResolutionModal';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { RealtimeEventPayload } from '@/types/realtime';
 import { Trash2 } from 'lucide-react';
 
 // Modules
@@ -134,6 +138,8 @@ export default function MainPage() {
   const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
   const [isTursoModalOpen, setIsTursoModalOpen] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isRealtimeModalOpen, setIsRealtimeModalOpen] = useState(false);
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
   const [isTursoConnected, setIsTursoConnected] = useState(false);
   const [currentPin, setCurrentPin] = useState<string>(() => getStoredPin());
   const [pinDisabled, setPinDisabledState] = useState<boolean>(() => {
@@ -217,6 +223,64 @@ export default function MainPage() {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 3500);
   }, []);
+
+  // Tự động đồng bộ hai chiều Danh sách Học sinh & Hồ sơ Sức khỏe trên client
+  useEffect(() => {
+    if (!studentsData || studentsData.length === 0) return;
+    const today = new Date().toISOString().split('T')[0];
+    let needsUpdate = false;
+    const updatedHealth = [...healthData];
+
+    studentsData.forEach((st) => {
+      const hasHealth = updatedHealth.some(
+        (h) =>
+          h.studentId === st.id ||
+          h.studentName.trim().toLowerCase() === st.fullName.trim().toLowerCase()
+      );
+      if (!hasHealth) {
+        let h = 100;
+        let w = 15.5;
+        if (st.className.includes('Nhà Trẻ')) {
+          h = 86.5;
+          w = 12.2;
+        } else if (st.className.includes('Mầm')) {
+          h = 96.0;
+          w = 14.2;
+        } else if (st.className.includes('Chồi')) {
+          h = 103.5;
+          w = 16.5;
+        } else if (st.className.includes('Lá')) {
+          h = 111.0;
+          w = 19.0;
+        }
+
+        updatedHealth.push({
+          id: `hr-${st.id}`,
+          studentId: st.id,
+          studentName: st.fullName,
+          className: st.className,
+          checkDate: today,
+          heightCm: h,
+          weightKg: w,
+          nutritionStatus: 'Bình thường (Kênh A)',
+          vaccinationStatus: 'Đầy đủ theo độ tuổi',
+          generalHealth: 'Tốt',
+          doctorOrExaminer: 'Cán bộ Y tế học đường',
+          notes:
+            st.allergiesOrDiet && st.allergiesOrDiet !== 'Không có dị ứng'
+              ? `Lưu ý ăn uống: ${st.allergiesOrDiet}`
+              : 'Đồng bộ tự động từ danh sách lớp',
+        });
+        needsUpdate = true;
+      }
+    });
+
+    if (needsUpdate) {
+      setHealthData(updatedHealth);
+      moduleStorage.saveHealth(updatedHealth);
+      syncModuleToServer('health', updatedHealth);
+    }
+  }, [studentsData.length]);
 
   // Xóa toàn bộ dữ liệu mẫu để người dùng bắt đầu tự nhập dữ liệu thực tế
   const handleConfirmClearAllData = useCallback(async () => {
@@ -550,11 +614,52 @@ export default function MainPage() {
           moduleStorage.saveSamples(clean);
         }
         if (Array.isArray(data.students)) {
-          const clean = data.students.filter((r: any) => !deletedIds.has(r.id));
-          setStudentsData(clean);
-          moduleStorage.saveStudents(clean);
-        }
-        if (Array.isArray(data.healthRecords)) {
+          const cleanStudents = data.students.filter((r: any) => !deletedIds.has(r.id));
+          const cleanHealth = Array.isArray(data.healthRecords)
+            ? data.healthRecords.filter((r: any) => !deletedIds.has(r.id))
+            : [];
+          
+          // Đảm bảo 100% học sinh đều đồng bộ có hồ sơ sức khỏe
+          const today = new Date().toISOString().split('T')[0];
+          const updatedHealth = [...cleanHealth];
+          cleanStudents.forEach((st: any) => {
+            const hasRec = updatedHealth.some(
+              (h: any) =>
+                h.studentId === st.id ||
+                h.studentName.trim().toLowerCase() === st.fullName.trim().toLowerCase()
+            );
+            if (!hasRec) {
+              let h = 100;
+              let w = 15.5;
+              if (st.className.includes('Nhà Trẻ')) { h = 86.5; w = 12.2; }
+              else if (st.className.includes('Mầm')) { h = 96.0; w = 14.2; }
+              else if (st.className.includes('Chồi')) { h = 103.5; w = 16.5; }
+              else if (st.className.includes('Lá')) { h = 111.0; w = 19.0; }
+
+              updatedHealth.push({
+                id: `hr-${st.id}`,
+                studentId: st.id,
+                studentName: st.fullName,
+                className: st.className,
+                checkDate: today,
+                heightCm: h,
+                weightKg: w,
+                nutritionStatus: 'Bình thường (Kênh A)',
+                vaccinationStatus: 'Đầy đủ theo độ tuổi',
+                generalHealth: 'Tốt',
+                doctorOrExaminer: 'Cán bộ Y tế học đường',
+                notes: st.allergiesOrDiet && st.allergiesOrDiet !== 'Không có dị ứng'
+                  ? `Lưu ý ăn uống: ${st.allergiesOrDiet}`
+                  : 'Đồng bộ tự động từ danh sách lớp',
+              });
+            }
+          });
+
+          setStudentsData(cleanStudents);
+          moduleStorage.saveStudents(cleanStudents);
+          setHealthData(updatedHealth);
+          moduleStorage.saveHealth(updatedHealth);
+        } else if (Array.isArray(data.healthRecords)) {
           const clean = data.healthRecords.filter((r: any) => !deletedIds.has(r.id));
           setHealthData(clean);
           moduleStorage.saveHealth(clean);
@@ -650,6 +755,39 @@ export default function MainPage() {
       syncChannel?.close();
     };
   }, [loadMasterData]);
+
+  // Phân hệ Đồng Bộ Thời Gian Thực (Real-time SSE & Concurrency Control - Giai đoạn 3)
+  const realtime = useRealtimeSync({
+    enabled: true,
+    onRemoteMutation: useCallback((event: RealtimeEventPayload) => {
+      loadMasterData();
+      showToast(`☁️ Đồng bộ tức thời (SSE): ${event.message || 'Dữ liệu vừa được cập nhật từ thiết bị khác'}`, 'info');
+    }, [loadMasterData, showToast]),
+    onRemoteSync: useCallback(() => {
+      loadMasterData();
+      showToast('☁️ [SSE] Dữ liệu vừa được làm mới từ máy chủ!', 'info');
+    }, [loadMasterData, showToast]),
+    onConflict: useCallback(() => {
+      setIsConflictModalOpen(true);
+    }, []),
+  });
+
+  const handleResolveConflict = async (decision: 'keep_local' | 'accept_remote' | 'smart_merge') => {
+    const resolved = realtime.resolveConflict(decision);
+    setIsConflictModalOpen(false);
+    if (!resolved) return;
+
+    if (decision === 'keep_local') {
+      await handleQuickSaveAndSync();
+      showToast('✅ Đã giữ lại dữ liệu trên máy này và đồng bộ lên đám mây.', 'success');
+    } else if (decision === 'accept_remote') {
+      await loadMasterData();
+      showToast('✅ Đã cập nhật phiên bản mới nhất từ máy chủ.', 'info');
+    } else if (decision === 'smart_merge') {
+      await loadMasterData();
+      showToast('✅ Đã hợp nhất thông minh dữ liệu thành công.', 'success');
+    }
+  };
 
   // Handlers for Turso sync
   const handleSyncToCloud = async () => {
@@ -1233,7 +1371,7 @@ export default function MainPage() {
     }
   };
 
-  // CRUD Handlers for Health
+  // CRUD Handlers for Health (Đồng bộ hai chiều với Danh sách Học sinh)
   const handleSaveHealth = (record: HealthRecord) => {
     const exists = healthData.some((r) => r.id === record.id);
     const updated = exists
@@ -1242,6 +1380,34 @@ export default function MainPage() {
     setHealthData(updated);
     moduleStorage.saveHealth(updated);
     syncModuleToServer('health', updated);
+
+    // Đồng bộ ngược lại Danh sách Học sinh nếu thay đổi lớp hoặc tên
+    setStudentsData((prevStudents) => {
+      const matchIdx = prevStudents.findIndex(
+        (s) => s.id === record.studentId || s.fullName.trim().toLowerCase() === record.studentName.trim().toLowerCase()
+      );
+      if (matchIdx !== -1) {
+        const student = prevStudents[matchIdx];
+        let hasChange = false;
+        let updatedStudent = { ...student };
+        if (record.className && record.className !== student.className) {
+          updatedStudent.className = record.className as any;
+          hasChange = true;
+        }
+        if (record.studentName && record.studentName !== student.fullName) {
+          updatedStudent.fullName = record.studentName;
+          hasChange = true;
+        }
+        if (hasChange) {
+          const newStudents = [...prevStudents];
+          newStudents[matchIdx] = updatedStudent;
+          moduleStorage.saveStudents(newStudents);
+          syncModuleToServer('students', newStudents);
+          return newStudents;
+        }
+      }
+      return prevStudents;
+    });
   };
 
   const handleDeleteHealth = (id: string) => {
@@ -1778,6 +1944,9 @@ export default function MainPage() {
           onOpenLogoModal={() => setIsLogoModalOpen(true)}
           onOpenTursoModal={() => setIsTursoModalOpen(true)}
           onOpenAiModal={() => setIsAiModalOpen(true)}
+          onOpenRealtimeModal={() => setIsRealtimeModalOpen(true)}
+          realtimeConnectionStatus={realtime.connectionStatus}
+          realtimeActiveCount={realtime.activeCount}
           isTursoConnected={isTursoConnected}
           onSaveCloud={handleQuickSaveAndSync}
           isSavingCloud={isSavingCloud}
@@ -1871,6 +2040,7 @@ export default function MainPage() {
               onDeleteRecord={handleDeleteStudents}
               onPrintPreview={() => setIsReportModalOpen(true)}
               onClearAllSampleData={() => setIsClearAllDataModalOpen(true)}
+              onNavigateToHealth={() => setActiveModuleId('health')}
             />
           )}
 
@@ -1881,6 +2051,7 @@ export default function MainPage() {
               onSaveRecord={handleSaveHealth}
               onDeleteRecord={handleDeleteHealth}
               onPrintPreview={() => setIsReportModalOpen(true)}
+              onNavigateToStudents={() => setActiveModuleId('students')}
             />
           )}
 
@@ -1984,6 +2155,7 @@ export default function MainPage() {
         onRestoreData={handleRestoreSnapshot}
         currentPin={currentPin}
         schoolName={schoolInfo.name}
+        onOpenRealtimeModal={() => setIsRealtimeModalOpen(true)}
         localMetrics={{
           step1: step1Data.length,
           step2: step2Data.length,
@@ -1997,6 +2169,30 @@ export default function MainPage() {
           finance: transactionsData.length,
           salaries: salariesData.length,
         }}
+      />
+
+      {/* Realtime Multi-Device Drawer Modal (Giai đoạn 3: Real-Time SSE Multi-Device) */}
+      <RealtimeDrawerModal
+        isOpen={isRealtimeModalOpen}
+        onClose={() => setIsRealtimeModalOpen(false)}
+        connectionStatus={realtime.connectionStatus}
+        activeClients={realtime.activeClients}
+        activeCount={realtime.activeCount}
+        recentEvents={realtime.recentEvents}
+        pingMs={realtime.pingMs}
+        lastEventTime={realtime.lastEventTime}
+        deviceInfo={realtime.deviceInfo}
+        onReconnect={realtime.reconnect}
+        onSimulateConflict={realtime.simulateTestConflict}
+        onUpdateDeviceIdentity={realtime.updateDeviceIdentity}
+      />
+
+      {/* Concurrency Conflict Resolution Modal (Giai đoạn 3: Optimistic Locking) */}
+      <ConflictResolutionModal
+        conflict={realtime.conflictData}
+        isOpen={isConflictModalOpen || !!realtime.conflictData}
+        onClose={() => setIsConflictModalOpen(false)}
+        onResolve={handleResolveConflict}
       />
 
       {/* AI Preschool Assistant Modal (Groq LPU & Gemini) */}

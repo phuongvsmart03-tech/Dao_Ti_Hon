@@ -245,7 +245,13 @@ export function getSchoolInfo(): SchoolInfo {
   if (typeof window === 'undefined') return initialSchoolInfo;
   try {
     const data = localStorage.getItem(STORAGE_KEYS.SCHOOL_INFO);
-    return data ? JSON.parse(data) : initialSchoolInfo;
+    if (!data) return initialSchoolInfo;
+    const parsed = JSON.parse(data);
+    return {
+      ...initialSchoolInfo,
+      ...parsed,
+      sampleStorageTemp: parsed.sampleStorageTemp || '5°C',
+    };
   } catch {
     return initialSchoolInfo;
   }

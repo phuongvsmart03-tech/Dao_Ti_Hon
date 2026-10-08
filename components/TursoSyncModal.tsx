@@ -30,6 +30,7 @@ import {
   ShieldAlert,
   Server,
   Zap,
+  Radio,
 } from 'lucide-react';
 import { isPinDisabled } from '@/lib/storage';
 
@@ -57,6 +58,7 @@ interface TursoSyncModalProps {
   onResetData?: () => Promise<void>;
   onBackupData?: () => void;
   onRestoreData?: (snapshot: any) => Promise<void>;
+  onOpenRealtimeModal?: () => void;
   currentPin?: string;
   schoolName?: string;
   localMetrics?: LocalMetrics;
@@ -72,6 +74,7 @@ export default function TursoSyncModal({
   onResetData,
   onBackupData,
   onRestoreData,
+  onOpenRealtimeModal,
   currentPin = '150520',
   schoolName = 'Trường Mầm Non',
   localMetrics,
@@ -977,22 +980,39 @@ export default function TursoSyncModal({
                   </div>
 
                   {/* Phase 3 */}
-                  <div className="p-4 rounded-xl border border-sky-200 bg-white space-y-2 hover:border-sky-300 transition-colors">
+                  <div className="p-4 rounded-xl border border-sky-300 bg-sky-50/70 space-y-2 hover:border-sky-400 transition-colors">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-sky-900 flex items-center gap-2">
+                      <span className="text-xs font-extrabold text-sky-950 flex items-center gap-2">
                         <span className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs">
                           3
                         </span>
                         Giai đoạn 3: Đồng Bộ Thời Gian Thực (Real-time SSE) &amp; Xử Lý Xung Đột
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-900">
-                        Nâng cao
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-950 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                        Đang hoạt động (Hoàn tất)
                       </span>
                     </div>
-                    <p className="text-xs text-slate-600 pl-8">
-                      - Tích hợp <strong>Server-Sent Events (SSE)</strong> hoặc WebSockets: Khi nhà bếp ghi nhận nguyên liệu ở điện thoại, màn hình máy tính ban giám hiệu tự động cập nhật ngay lập tức.<br />
-                      - Cơ chế <strong>Version Vector / Optimistic Locking</strong> ngăn chặn việc 2 người cùng chỉnh sửa 1 bản ghi bị ghi đè mất thông tin.
+                    <p className="text-xs text-slate-700 pl-8">
+                      - Tích hợp <strong>Server-Sent Events (SSE) v3.0</strong>: Khi nhà bếp ghi nhận kiểm thực ở iPad, màn hình máy tính ban giám hiệu và y tế tự động cập nhật ngay lập tức.<br />
+                      - Cơ chế <strong>Khóa Lạc Quan (Optimistic Locking)</strong> &amp; <strong>Hộp Thoại Phân Giải Xung Đột (Conflict Resolution Modal)</strong>: Bảo vệ an toàn 100% dữ liệu khi nhiều người cùng chỉnh sửa.<br />
+                      - Tự động nhận diện thiết bị trực tuyến, phát hiện rớt mạng và kết nối lại thông minh.
                     </p>
+                    {onOpenRealtimeModal && (
+                      <div className="pl-8 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            onOpenRealtimeModal();
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <Radio className="w-3.5 h-3.5" />
+                          <span>Mở Trung Tâm Thời Gian Thực SSE &amp; Kiểm Thử Xung Đột</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Phase 4 */}

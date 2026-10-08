@@ -26,6 +26,9 @@ export const initialSchoolInfo: SchoolInfo = {
   receiverName: 'HUỲNH THỊ HOA',
   sampleKeeperName: 'HUỲNH THỊ HOA',
   sampleDisposerName: 'HUỲNH THỊ HOA',
+  sampleStorageTemp: '5°C',
+  learnSaturday: false,
+  learnSunday: false,
   defaultPrintOrientation: 'landscape',
   // Nhân sự Ký tên Biểu mẫu & Báo cáo Hành chính
   creatorName: 'THANH XUÂN',
