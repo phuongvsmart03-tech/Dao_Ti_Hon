@@ -70,6 +70,7 @@ import ConflictResolutionModal from '@/components/ConflictResolutionModal';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { RealtimeEventPayload } from '@/types/realtime';
 import { Trash2 } from 'lucide-react';
+import { getAutoBackupConfig, saveAutoBackupConfig, saveLocalBackupSnapshot } from '@/lib/services/auto-backup';
 
 // Modules
 import LightningModule from '@/components/modules/LightningModule';
@@ -568,8 +569,11 @@ export default function MainPage() {
         setIsTursoConnected(true);
 
         if (data.schoolInfo && Object.keys(data.schoolInfo).length > 0) {
-          setSchoolInfo(data.schoolInfo);
-          saveSchoolInfo(data.schoolInfo);
+          setSchoolInfo((prev) => {
+            const merged = { ...prev, ...data.schoolInfo };
+            saveSchoolInfo(merged);
+            return merged;
+          });
         }
         if (data.defaultSettings && Object.keys(data.defaultSettings).length > 0) {
           setDefaultSettings(data.defaultSettings);
@@ -760,6 +764,13 @@ export default function MainPage() {
   const realtime = useRealtimeSync({
     enabled: true,
     onRemoteMutation: useCallback((event: RealtimeEventPayload) => {
+      if (event.module === 'school_info' && event.data) {
+        setSchoolInfo((prev) => {
+          const merged = { ...prev, ...event.data };
+          saveSchoolInfo(merged);
+          return merged;
+        });
+      }
       loadMasterData();
       showToast(`☁️ Đồng bộ tức thời (SSE): ${event.message || 'Dữ liệu vừa được cập nhật từ thiết bị khác'}`, 'info');
     }, [loadMasterData, showToast]),
@@ -788,6 +799,44 @@ export default function MainPage() {
       showToast('✅ Đã hợp nhất thông minh dữ liệu thành công.', 'success');
     }
   };
+
+  // Giai đoạn 4: Bộ Lập Lịch Tự Động Sao Lưu Hàng Đêm (Automated Daily 00:00 Backup Scheduler)
+  useEffect(() => {
+    const checkAutoBackup = async () => {
+      if (typeof window === 'undefined') return;
+      const cfg = getAutoBackupConfig();
+      if (!cfg.enabled) return;
+
+      const now = new Date();
+      const todayDateStr = now.toISOString().split('T')[0];
+      const lastBackupDateStr = cfg.lastBackupDate ? cfg.lastBackupDate.split('T')[0] : null;
+
+      if (todayDateStr !== lastBackupDateStr) {
+        try {
+          const res = await fetch('/api/backup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'create_backup' }),
+          });
+          const data = await res.json();
+          if (data.success && data.backup) {
+            saveLocalBackupSnapshot(data.backup);
+            saveAutoBackupConfig({ lastBackupDate: now.toISOString() });
+            showToast(`💾 [Giai đoạn 4: Tự Động Sao Lưu] Đã hoàn tất bản sao lưu định kỳ hàng ngày (${data.backup.checksum}).`, 'info');
+          }
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    const timer = setTimeout(checkAutoBackup, 6000);
+    const interval = setInterval(checkAutoBackup, 30 * 60 * 1000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [showToast]);
 
   // Handlers for Turso sync
   const handleSyncToCloud = async () => {
@@ -1158,7 +1207,12 @@ export default function MainPage() {
     fetch('/api/turso', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_school_info', payload: updatedInfo }),
+      body: JSON.stringify({
+        action: 'save_school_info',
+        payload: updatedInfo,
+        clientId: realtime?.deviceInfo?.clientId,
+        deviceName: realtime?.deviceInfo?.deviceName,
+      }),
     }).catch(() => {});
   };
 
@@ -1167,6 +1221,16 @@ export default function MainPage() {
     const updated = { ...schoolInfo, logoUrl };
     setSchoolInfo(updated);
     saveSchoolInfo(updated);
+    fetch('/api/turso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save_school_info',
+        payload: updated,
+        clientId: realtime?.deviceInfo?.clientId,
+        deviceName: realtime?.deviceInfo?.deviceName,
+      }),
+    }).catch(() => {});
   };
 
   // Handler for PIN update
@@ -2156,6 +2220,9 @@ export default function MainPage() {
         currentPin={currentPin}
         schoolName={schoolInfo.name}
         onOpenRealtimeModal={() => setIsRealtimeModalOpen(true)}
+        onOpenAiModal={() => setIsAiModalOpen(true)}
+        menuData={menuData}
+        studentsData={studentsData}
         localMetrics={{
           step1: step1Data.length,
           step2: step2Data.length,

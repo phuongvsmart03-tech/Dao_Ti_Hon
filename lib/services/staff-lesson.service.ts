@@ -15,6 +15,21 @@ export class StaffLessonService {
    */
   static async upsertSchoolInfo(db: Client, s: SchoolInfo): Promise<void> {
     const now = Date.now();
+    const signaturesObj: Record<string, string> = {};
+    if (s.medicalStaffSignature) signaturesObj.medicalStaffSignature = s.medicalStaffSignature;
+    if (s.headChefSignature) signaturesObj.headChefSignature = s.headChefSignature;
+    if (s.creatorSignature) signaturesObj.creatorSignature = s.creatorSignature;
+    if (s.teamLeaderNutritionSignature) signaturesObj.teamLeaderNutritionSignature = s.teamLeaderNutritionSignature;
+    if (s.teamLeaderEducationSignature) signaturesObj.teamLeaderEducationSignature = s.teamLeaderEducationSignature;
+    if (s.vicePrincipalSignature) signaturesObj.vicePrincipalSignature = s.vicePrincipalSignature;
+    if (s.accountantSignature) signaturesObj.accountantSignature = s.accountantSignature;
+    if (s.inspectorSignature) signaturesObj.inspectorSignature = s.inspectorSignature;
+    if (s.receiverSignature) signaturesObj.receiverSignature = s.receiverSignature;
+    if (s.sampleKeeperSignature) signaturesObj.sampleKeeperSignature = s.sampleKeeperSignature;
+    if (s.sampleDisposerSignature) signaturesObj.sampleDisposerSignature = s.sampleDisposerSignature;
+    if (s.principalSignature) signaturesObj.principalSignature = s.principalSignature;
+    const signaturesJson = JSON.stringify(signaturesObj);
+
     await db.execute({
       sql: `INSERT INTO school_info (
         id, name, department, address, phone, academic_year,
@@ -26,8 +41,14 @@ export class StaffLessonService {
         veg_supplier_name, veg_supplier_address, veg_deliverer_name,
         seafood_supplier_name, seafood_supplier_address, seafood_deliverer_name,
         dry_producer_name, dry_producer_address, dry_supplier_name,
-        dry_supplier_address, dry_deliverer_name, logo_url, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        dry_supplier_address, dry_deliverer_name, logo_url,
+        medical_staff_signature, head_chef_signature, creator_signature,
+        team_leader_nutrition_signature, team_leader_education_signature,
+        vice_principal_signature, accountant_signature, inspector_signature,
+        receiver_signature, sample_keeper_signature, sample_disposer_signature,
+        principal_signature, sample_storage_temp, learn_saturday, learn_sunday,
+        signatures_json, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         department = excluded.department,
@@ -62,10 +83,25 @@ export class StaffLessonService {
         dry_supplier_address = excluded.dry_supplier_address,
         dry_deliverer_name = excluded.dry_deliverer_name,
         logo_url = excluded.logo_url,
-        updated_at = excluded.updated_at
-      WHERE excluded.updated_at >= school_info.updated_at`,
+        medical_staff_signature = excluded.medical_staff_signature,
+        head_chef_signature = excluded.head_chef_signature,
+        creator_signature = excluded.creator_signature,
+        team_leader_nutrition_signature = excluded.team_leader_nutrition_signature,
+        team_leader_education_signature = excluded.team_leader_education_signature,
+        vice_principal_signature = excluded.vice_principal_signature,
+        accountant_signature = excluded.accountant_signature,
+        inspector_signature = excluded.inspector_signature,
+        receiver_signature = excluded.receiver_signature,
+        sample_keeper_signature = excluded.sample_keeper_signature,
+        sample_disposer_signature = excluded.sample_disposer_signature,
+        principal_signature = excluded.principal_signature,
+        sample_storage_temp = excluded.sample_storage_temp,
+        learn_saturday = excluded.learn_saturday,
+        learn_sunday = excluded.learn_sunday,
+        signatures_json = excluded.signatures_json,
+        updated_at = excluded.updated_at`,
       args: [
-        (s as any).id || 'default_school_config',
+        'default',
         s.name,
         s.department,
         s.address,
@@ -99,15 +135,47 @@ export class StaffLessonService {
         s.drySupplierAddress || '',
         s.dryDelivererName || '',
         s.logoUrl || '',
-        (s as any).updated_at || now,
+        s.medicalStaffSignature || '',
+        s.headChefSignature || '',
+        s.creatorSignature || '',
+        s.teamLeaderNutritionSignature || '',
+        s.teamLeaderEducationSignature || '',
+        s.vicePrincipalSignature || '',
+        s.accountantSignature || '',
+        s.inspectorSignature || '',
+        s.receiverSignature || '',
+        s.sampleKeeperSignature || '',
+        s.sampleDisposerSignature || '',
+        s.principalSignature || '',
+        s.sampleStorageTemp || '5°C',
+        s.learnSaturday ? 1 : 0,
+        s.learnSunday ? 1 : 0,
+        signaturesJson,
+        now,
       ],
     });
+
+    // Clean up any stray duplicate rows with different IDs
+    await db.execute({
+      sql: `DELETE FROM school_info WHERE id != 'default'`,
+      args: [],
+    }).catch(() => {});
   }
 
   static async getSchoolInfo(db: Client): Promise<SchoolInfo | null> {
-    const res = await db.execute(`SELECT * FROM school_info ORDER BY updated_at DESC LIMIT 1`);
+    const res = await db.execute(`SELECT * FROM school_info ORDER BY CASE WHEN id = 'default' THEN 0 ELSE 1 END LIMIT 1`);
     if (res.rows.length === 0) return null;
     const row: any = res.rows[0];
+
+    let extraSignatures: Record<string, string> = {};
+    if (row.signatures_json) {
+      try {
+        extraSignatures = JSON.parse(row.signatures_json);
+      } catch {
+        // ignore
+      }
+    }
+
     return {
       id: row.id,
       name: row.name,
@@ -143,6 +211,21 @@ export class StaffLessonService {
       drySupplierAddress: row.dry_supplier_address || undefined,
       dryDelivererName: row.dry_deliverer_name || undefined,
       logoUrl: row.logo_url || '',
+      medicalStaffSignature: row.medical_staff_signature || extraSignatures.medicalStaffSignature || undefined,
+      headChefSignature: row.head_chef_signature || extraSignatures.headChefSignature || undefined,
+      creatorSignature: row.creator_signature || extraSignatures.creatorSignature || undefined,
+      teamLeaderNutritionSignature: row.team_leader_nutrition_signature || extraSignatures.teamLeaderNutritionSignature || undefined,
+      teamLeaderEducationSignature: row.team_leader_education_signature || extraSignatures.teamLeaderEducationSignature || undefined,
+      vicePrincipalSignature: row.vice_principal_signature || extraSignatures.vicePrincipalSignature || undefined,
+      accountantSignature: row.accountant_signature || extraSignatures.accountantSignature || undefined,
+      inspectorSignature: row.inspector_signature || extraSignatures.inspectorSignature || undefined,
+      receiverSignature: row.receiver_signature || extraSignatures.receiverSignature || undefined,
+      sampleKeeperSignature: row.sample_keeper_signature || extraSignatures.sampleKeeperSignature || undefined,
+      sampleDisposerSignature: row.sample_disposer_signature || extraSignatures.sampleDisposerSignature || undefined,
+      principalSignature: row.principal_signature || extraSignatures.principalSignature || undefined,
+      sampleStorageTemp: row.sample_storage_temp || '5°C',
+      learnSaturday: Boolean(row.learn_saturday),
+      learnSunday: Boolean(row.learn_sunday),
       updated_at: row.updated_at,
     };
   }

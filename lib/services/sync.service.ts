@@ -93,6 +93,21 @@ export class SyncService {
     // 1. School Info
     if (snapshot.schoolInfo) {
       const s = snapshot.schoolInfo;
+      const signaturesObj: Record<string, string> = {};
+      if (s.medicalStaffSignature) signaturesObj.medicalStaffSignature = s.medicalStaffSignature;
+      if (s.headChefSignature) signaturesObj.headChefSignature = s.headChefSignature;
+      if (s.creatorSignature) signaturesObj.creatorSignature = s.creatorSignature;
+      if (s.teamLeaderNutritionSignature) signaturesObj.teamLeaderNutritionSignature = s.teamLeaderNutritionSignature;
+      if (s.teamLeaderEducationSignature) signaturesObj.teamLeaderEducationSignature = s.teamLeaderEducationSignature;
+      if (s.vicePrincipalSignature) signaturesObj.vicePrincipalSignature = s.vicePrincipalSignature;
+      if (s.accountantSignature) signaturesObj.accountantSignature = s.accountantSignature;
+      if (s.inspectorSignature) signaturesObj.inspectorSignature = s.inspectorSignature;
+      if (s.receiverSignature) signaturesObj.receiverSignature = s.receiverSignature;
+      if (s.sampleKeeperSignature) signaturesObj.sampleKeeperSignature = s.sampleKeeperSignature;
+      if (s.sampleDisposerSignature) signaturesObj.sampleDisposerSignature = s.sampleDisposerSignature;
+      if (s.principalSignature) signaturesObj.principalSignature = s.principalSignature;
+      const signaturesJson = JSON.stringify(signaturesObj);
+
       batchStatements.push({
         sql: `INSERT INTO school_info (
           id, name, department, address, phone, academic_year,
@@ -104,8 +119,14 @@ export class SyncService {
           veg_supplier_name, veg_supplier_address, veg_deliverer_name,
           seafood_supplier_name, seafood_supplier_address, seafood_deliverer_name,
           dry_producer_name, dry_producer_address, dry_supplier_name,
-          dry_supplier_address, dry_deliverer_name, logo_url, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          dry_supplier_address, dry_deliverer_name, logo_url,
+          medical_staff_signature, head_chef_signature, creator_signature,
+          team_leader_nutrition_signature, team_leader_education_signature,
+          vice_principal_signature, accountant_signature, inspector_signature,
+          receiver_signature, sample_keeper_signature, sample_disposer_signature,
+          principal_signature, sample_storage_temp, learn_saturday, learn_sunday,
+          signatures_json, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           name = excluded.name,
           department = excluded.department,
@@ -140,9 +161,25 @@ export class SyncService {
           dry_supplier_address = excluded.dry_supplier_address,
           dry_deliverer_name = excluded.dry_deliverer_name,
           logo_url = excluded.logo_url,
+          medical_staff_signature = excluded.medical_staff_signature,
+          head_chef_signature = excluded.head_chef_signature,
+          creator_signature = excluded.creator_signature,
+          team_leader_nutrition_signature = excluded.team_leader_nutrition_signature,
+          team_leader_education_signature = excluded.team_leader_education_signature,
+          vice_principal_signature = excluded.vice_principal_signature,
+          accountant_signature = excluded.accountant_signature,
+          inspector_signature = excluded.inspector_signature,
+          receiver_signature = excluded.receiver_signature,
+          sample_keeper_signature = excluded.sample_keeper_signature,
+          sample_disposer_signature = excluded.sample_disposer_signature,
+          principal_signature = excluded.principal_signature,
+          sample_storage_temp = excluded.sample_storage_temp,
+          learn_saturday = excluded.learn_saturday,
+          learn_sunday = excluded.learn_sunday,
+          signatures_json = excluded.signatures_json,
           updated_at = excluded.updated_at`,
         args: [
-          s.id || 'default_school_config',
+          'default',
           s.name,
           s.department,
           s.address,
@@ -176,6 +213,22 @@ export class SyncService {
           s.drySupplierAddress || '',
           s.dryDelivererName || '',
           s.logoUrl || '',
+          s.medicalStaffSignature || '',
+          s.headChefSignature || '',
+          s.creatorSignature || '',
+          s.teamLeaderNutritionSignature || '',
+          s.teamLeaderEducationSignature || '',
+          s.vicePrincipalSignature || '',
+          s.accountantSignature || '',
+          s.inspectorSignature || '',
+          s.receiverSignature || '',
+          s.sampleKeeperSignature || '',
+          s.sampleDisposerSignature || '',
+          s.principalSignature || '',
+          s.sampleStorageTemp || '5°C',
+          s.learnSaturday ? 1 : 0,
+          s.learnSunday ? 1 : 0,
+          signaturesJson,
           s.updated_at || now,
         ],
       });

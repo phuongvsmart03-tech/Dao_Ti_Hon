@@ -1,0 +1,16 @@
+{
+  "editor.formatOnSave": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+  "files.associations": {
+    "*.css": "tailwindcss",
+    "bun.lock": "jsonc"
+  },
+  "editor.quickSuggestions": {
+    "strings": true
+  }
+}
